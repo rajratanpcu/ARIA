@@ -1,10 +1,12 @@
 # ARIA: Agentic Release Intelligence Architecture
 ### Autonomous End-to-End Mobile DevOps — From Build Prediction to Incident Resolution
 
+[![CI/CD Pipeline](https://github.com/rajratanpcu/ARIA/actions/workflows/ci.yml/badge.svg)](https://github.com/rajratanpcu/ARIA/actions)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue.svg)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-18.2-cyan.svg)](https://reactjs.org/)
-[![Vite](https://img.shields.io/badge/Vite-5.0-purple.svg)](https://vitejs.dev/)
-[![Tailwind CSS](https://img.shields.io/badge/TailwindCSS-3.4-38bdf8.svg)](https://tailwindcss.com/)
+[![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.2.5-brightgreen.svg)](https://spring.io/projects/spring-boot)
+[![Java](https://img.shields.io/badge/Java-21-orange.svg)](https://openjdk.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue.svg)](https://www.postgresql.org/)
 [![Node.js Tests](https://img.shields.io/badge/Tests-6%2F6%20Passing-brightgreen.svg)]()
 [![Autonomy Level](https://img.shields.io/badge/Autonomy-Level%203%20(Bounded%20Active)-emerald.svg)]()
 
