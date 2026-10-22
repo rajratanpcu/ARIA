@@ -34,6 +34,7 @@ import {
   calculateDecayedWeight,
   calculateTestPriority,
 } from '../core/afpEngine';
+import { ariaApi } from '../services/api';
 
 export type ThemeMode = 'dark' | 'light';
 
@@ -156,6 +157,32 @@ export const AriaProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       root.classList.remove('dark');
     }
   }, [theme]);
+
+  // Initial remote fetch on startup (if Spring Boot backend is live)
+  useEffect(() => {
+    let isMounted = true;
+    const fetchRemoteData = async () => {
+      try {
+        const isLive = await ariaApi.checkHealth();
+        if (isLive && isMounted) {
+          const remoteModules = await ariaApi.fetchModules();
+          if (remoteModules && remoteModules.length > 0) {
+            setModules(remoteModules);
+          }
+          const remoteApprovals = await ariaApi.fetchApprovals();
+          if (remoteApprovals && remoteApprovals.length > 0) {
+            setApprovals(remoteApprovals);
+          }
+        }
+      } catch {
+        // Fallback to local state seamlessly
+      }
+    };
+    fetchRemoteData();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const toggleTheme = () => {
     setThemeState((prev) => (prev === 'dark' ? 'light' : 'dark'));
@@ -398,6 +425,9 @@ export const AriaProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       action: 'Cache policy set to strict_invalidation; CI suite adjusted to 1,334 tests',
     });
 
+    // Asynchronously notify Spring Boot backend if available
+    ariaApi.dispatchAfpSignal(incidentId).catch(() => {});
+
     return {
       success: true,
       message: `AFP-INCIDENT processed successfully. Module '${targetModule.name}' risk updated from ${previousWeight} to ${newWeight}. Cache set to strict_invalidation. CI suite expanded to 1,334 tests.`,
@@ -505,6 +535,9 @@ export const AriaProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         authorizedBy: 'Human Approval appr-02',
       });
     }
+
+    // Asynchronously notify Spring Boot backend if available
+    ariaApi.resolveApproval(approvalId, decision, reviewerNotes, 'Raj Ratan (DevOps Lead)').catch(() => {});
   };
 
   /**
