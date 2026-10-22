@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   AlertTriangle,
   Send,
@@ -6,9 +6,13 @@ import {
   FileText,
   Sparkles,
   Zap,
+  Activity,
+  Play,
+  Square,
 } from 'lucide-react';
 import { useAria } from '../../context/AriaContext';
 import { StatusBadge } from '../../components/common/StatusBadge';
+import { telemetryStreamer, TelemetryDataPoint } from '../../services/telemetryStreamer';
 
 export const IncidentIntelligencePage: React.FC = () => {
   const {
@@ -19,9 +23,30 @@ export const IncidentIntelligencePage: React.FC = () => {
   } = useAria();
 
   const [feedbackFeedbackNotice, setFeedbackNotice] = useState<string | null>(null);
+  const [liveStreamEnabled, setLiveStreamEnabled] = useState<boolean>(true);
+  const [liveLogs, setLiveLogs] = useState<string[]>([]);
+  const [currentMetrics, setCurrentMetrics] = useState<TelemetryDataPoint | null>(null);
 
   const selectedIncident =
     incidents.find((i) => i.id === selectedIncidentId) || incidents[0];
+
+  useEffect(() => {
+    if (liveStreamEnabled) {
+      telemetryStreamer.start(2500);
+      const unsubscribe = telemetryStreamer.subscribe((point) => {
+        setCurrentMetrics(point);
+        if (point.logLine) {
+          setLiveLogs((prev) => [point.logLine!, ...prev.slice(0, 19)]);
+        }
+      });
+      return () => {
+        unsubscribe();
+        telemetryStreamer.stop();
+      };
+    } else {
+      telemetryStreamer.stop();
+    }
+  }, [liveStreamEnabled]);
 
   const handleSendAfp = () => {
     const res = sendAfpIncidentSignal(selectedIncident.id);
@@ -266,18 +291,49 @@ export const IncidentIntelligencePage: React.FC = () => {
             </div>
           </div>
 
-          {/* Relevant Runtime Logs */}
+          {/* Relevant Runtime Logs & Live Stream */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm">
-            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-2 flex items-center gap-2">
-              <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-              Runtime Telemetry & Stack Trace
-            </h3>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                Runtime Telemetry Stream
+              </h3>
+              <button
+                onClick={() => setLiveStreamEnabled((prev) => !prev)}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-mono font-medium border transition-colors ${
+                  liveStreamEnabled
+                    ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950 dark:text-rose-300 dark:border-rose-800'
+                    : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800'
+                }`}
+              >
+                {liveStreamEnabled ? <Square className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+                <span>{liveStreamEnabled ? 'Pause Live Stream' : 'Resume Live Stream'}</span>
+              </button>
+            </div>
+
+            {currentMetrics && (
+              <div className="grid grid-cols-3 gap-2 mb-3 p-2 rounded bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 font-mono text-[10px]">
+                <div>
+                  <span className="text-slate-400 block">HTTP 5xx Rate</span>
+                  <span className="font-bold text-rose-600 dark:text-rose-400">{currentMetrics.httpErrorRate}%</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block">p95 Latency</span>
+                  <span className="font-bold text-amber-600 dark:text-amber-400">{currentMetrics.p95LatencyMs}ms</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block">Memory Load</span>
+                  <span className="font-bold text-slate-700 dark:text-slate-300">{currentMetrics.memoryPressurePercent}%</span>
+                </div>
+              </div>
+            )}
+
             <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
-              Log excerpts ingested from client mobile devices and gateway proxies:
+              Ingested from mobile clients and edge proxies:
             </p>
 
             <div className="p-3 rounded-lg bg-slate-950 border border-slate-800 font-mono text-[10px] text-slate-300 space-y-2 overflow-x-auto max-h-96">
-              {selectedIncident.relevantLogs.map((log, i) => (
+              {(liveLogs.length > 0 ? liveLogs : selectedIncident.relevantLogs).map((log, i) => (
                 <div
                   key={i}
                   className={`leading-relaxed p-1 rounded ${
