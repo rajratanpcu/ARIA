@@ -7,8 +7,9 @@
 [![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.2.5-brightgreen.svg)](https://spring.io/projects/spring-boot)
 [![Java](https://img.shields.io/badge/Java-21-orange.svg)](https://openjdk.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue.svg)](https://www.postgresql.org/)
-[![Node.js Tests](https://img.shields.io/badge/Tests-6%2F6%20Passing-brightgreen.svg)]()
-[![Autonomy Level](https://img.shields.io/badge/Autonomy-Level%203%20(Bounded%20Active)-emerald.svg)]()
+[![Node.js Tests](https://img.shields.io/badge/Tests-11%2F11%20Passing-brightgreen.svg)]()
+[![Autonomy Level](https://img.shields.io/badge/Autonomy-Level%204%20(Cryptographic%20Gate)-amber.svg)]()
+[![SHA-256 Hash Chain](https://img.shields.io/badge/Audit-SHA--256%20Merkle%20Ledger-blue.svg)]()
 
 ---
 
@@ -177,6 +178,11 @@ tsx --test src/tests/afp.test.ts
 * `[PASS]` **AFP Exponential Decay**: Verifies half-life decay at Day 0 ($0.648$), Day 7 ($0.473$), and Day 60 ($0.300$).
 * `[PASS]` **Test Prioritization**: Verifies that elevating risk from $0.300$ to $0.648$ promotes previously pruned regression tests into active execution.
 * `[PASS]` **Governance Compliance**: Verifies that high-impact actions (`ROLLBACK`, `BROAD_CACHE_INVALIDATION`, `RELEASE_HOLD`) strictly enforce Level 4 human approval.
+* `[PASS]` **AI Hypothesis Engine**: Evaluates production stack trace excerpts, parses implicated AST module tokens, and assigns confidence $c = 0.870 \ge 0.750$.
+* `[PASS]` **Monte Carlo Simulation Engine**: Computes hazard rates, 95% confidence intervals, and dynamic test footprint sizing ($847 \to 1,334$).
+* `[PASS]` **CI Test Runner Simulator**: Simulates emulator matrices, flakiness categorization, and regression detection in `checkout-cart`.
+* `[PASS]` **Cryptographic Merkle Hash Chaining**: Validates SHA-256 parent-child links and detects intentional ledger tampering.
+* `[PASS]` **Level 4 Dual-Key Sign-Off**: Verifies primary human and secondary autonomous agent co-signatures with cryptographic fingerprints.
 
 ---
 
