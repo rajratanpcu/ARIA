@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  # PostgreSQL 16 Database
+  aria-postgres:
+    image: postgres:16-alpine
+    container_name: aria-postgres
+    environment:
+      POSTGRES_DB: aria_db
+      POSTGRES_USER: aria_user
+      POSTGRES_PASSWORD: aria_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aria_user -d aria_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - aria-network
+
+  # ARIA Spring Boot Backend API
+  aria-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: aria-backend
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://aria-postgres:5432/aria_db
+      SPRING_DATASOURCE_USERNAME: aria_user
+      SPRING_DATASOURCE_PASSWORD: aria_password
+      PORT: 8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      aria-postgres:
+        condition: service_healthy
+    networks:
+      - aria-network
+
+  # Frontend Nginx Web Server (Vite React Build)
+  aria-frontend:
+    image: nginx:alpine
+    container_name: aria-frontend
+    ports:
+      - "3000:80"
+    volumes:
+      - ./dist:/usr/share/nginx/html:ro
+      - ./aria-interactive-prototype.html:/usr/share/nginx/html/prototype.html:ro
+    depends_on:
+      - aria-backend
+    networks:
+      - aria-network
+
+volumes:
+  postgres_data:
+
+networks:
+  aria-network:
+    driver: bridge

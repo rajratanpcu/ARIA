@@ -178,13 +178,26 @@ tsx --test src/tests/afp.test.ts
 
 ---
 
-## 9. Stage 2 Production Target Overview
+## 9. Stage 2 Full-Stack Production Backend (Built & Ready)
 
-The complete academic specification outlines a production full-stack evolution:
-* **Backend**: Spring Boot 3.2 with Java 21, Spring Security OAuth2, and Flyway database migrations.
-* **Database**: PostgreSQL 16 schema with tables for `projects`, `modules`, `commits`, `builds`, `test_cases`, `test_runs`, `release_candidates`, `deployments`, `incidents`, `afp_messages`, `module_risks`, `approvals`, and `audit_events`.
-* **Containerization**: Multi-stage `Dockerfile` and `docker-compose.yml` orchestrating API, database, and telemetry collector services.
-* **AI Integration**: Spring AI / LangChain4j integration with local Ollama (`llama3:8b`) or Anthropic Claude API for dynamic log synthesis and hypothesis ranking.
+The repository includes a production Spring Boot 3.2 + Java 21 backend and PostgreSQL 16 database layer:
+* **Backend Architecture**: Spring Boot 3.2, Java 21, Spring Data JPA, Hibernate, Flyway Migrations, and REST API controllers under `/api/v1/*`.
+* **Database Layer**: PostgreSQL 16 schema with 12 normalized tables (`projects`, `modules`, `module_dependencies`, `commits`, `builds`, `test_cases`, `release_candidates`, `staged_deployments`, `incidents`, `incident_hypotheses`, `afp_messages`, `approvals`, `audit_events`).
+* **Flyway Migrations**:
+  * `V1__initial_schema.sql`: Full DDL with relational integrity and indexes.
+  * `V2__seed_research_benchmark_data.sql`: Seeded research paper canonical benchmark data.
+* **AFP Engine Java Implementation**: `AfpEngineService` implementing exact mathematical formulas for confidence gating ($c \ge 0.750$), risk propagation ($w = \min(1.0, w + c \cdot 0.4)$), and exponential decay ($e^{-\lambda t}$).
+* **Containerization**:
+  * Multi-stage `backend/Dockerfile` with Temurin 21 JRE and non-root security.
+  * `docker-compose.yml` orchestrating PostgreSQL 16, Spring Boot API, and Nginx frontend.
+
+### To Run with Docker Compose:
+```bash
+docker compose up -d --build
+```
+* **Frontend**: `http://localhost:3000`
+* **Backend API**: `http://localhost:8080/api/v1/status`
+* **PostgreSQL**: `localhost:5432` (`aria_user` / `aria_password`)
 
 ---
 

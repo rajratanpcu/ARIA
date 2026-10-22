@@ -1,0 +1,44 @@
+spring:
+  application:
+    name: aria-backend
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/aria_db}
+    username: ${SPRING_DATASOURCE_USERNAME:aria_user}
+    password: ${SPRING_DATASOURCE_PASSWORD:aria_password}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+    show-sql: false
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+
+server:
+  port: ${PORT:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+# ARIA Specific Configuration
+aria:
+  afp:
+    baseline-risk-weight: 0.300
+    confidence-threshold: 0.750
+    alpha: 0.400
+    max-weight: 1.000
+    lambda-decay: 0.100
+  governance:
+    default-autonomy-level: 3
+    operator-name: "Raj Ratan (DevOps Lead)"
