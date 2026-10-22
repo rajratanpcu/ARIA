@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Rocket,
   CheckCircle2,
@@ -7,10 +7,14 @@ import {
   Pause,
   RotateCcw,
   Info,
+  ShieldAlert,
+  Sliders,
+  Activity,
 } from 'lucide-react';
 import { useAria } from '../../context/AriaContext';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { Modal } from '../../components/common/Modal';
+import { canaryRolloutEngine, CanaryCohortState, DEFAULT_CANARY_POLICY } from '../../services/canaryRolloutEngine';
 
 export const ReleaseDeploymentPage: React.FC = () => {
   const {
@@ -23,9 +27,24 @@ export const ReleaseDeploymentPage: React.FC = () => {
 
   const [isRollbackModalOpen, setIsRollbackModalOpen] = useState(false);
   const [isAdvanceModalOpen, setIsAdvanceModalOpen] = useState(false);
+  const [customHttpThreshold, setCustomHttpThreshold] = useState<number>(3.0);
 
   const stages: (2 | 10 | 50 | 100)[] = [2, 10, 50, 100];
   const currentHealth = deployment.stagedHealth[deployment.currentStage];
+
+  const evaluatedCanaryState = useMemo(() => {
+    return canaryRolloutEngine.evaluateCohort(
+      deployment.currentStage,
+      currentHealth.httpErrorRatePct,
+      currentHealth.crashRatePct,
+      currentHealth.p95LatencyMs,
+      { ...DEFAULT_CANARY_POLICY, maxHttpErrorRatePct: customHttpThreshold }
+    );
+  }, [deployment.currentStage, currentHealth, customHttpThreshold]);
+
+  const gateDecision = useMemo(() => {
+    return canaryRolloutEngine.checkCanaryGate(evaluatedCanaryState);
+  }, [evaluatedCanaryState]);
 
   return (
     <div className="space-y-6">
@@ -148,6 +167,39 @@ export const ReleaseDeploymentPage: React.FC = () => {
               <RotateCcw className="w-3.5 h-3.5" />
               <span>Level 4 Rollback</span>
             </button>
+          </div>
+        </div>
+
+        {/* Staged Rollout Visualizer: 2% -> 10% -> 50% -> 100% */}
+        <div className="mb-4 p-3.5 rounded-xl bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2 font-mono">
+            <span className="text-slate-500 dark:text-slate-400">DCA Gate Status:</span>
+            <span
+              className={`font-bold px-2 py-0.5 rounded text-[11px] ${
+                gateDecision.canAdvance
+                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                  : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+              }`}
+            >
+              {gateDecision.recommendation}
+            </span>
+            <span className="text-slate-500 dark:text-slate-400 font-sans truncate max-w-md">
+              {gateDecision.reason}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-slate-400 font-mono text-[11px]">Max 5xx Threshold:</span>
+            <input
+              type="number"
+              step="0.5"
+              min="1.0"
+              max="10.0"
+              value={customHttpThreshold}
+              onChange={(e) => setCustomHttpThreshold(parseFloat(e.target.value) || 3.0)}
+              className="w-16 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-2 py-0.5 text-xs font-mono"
+            />
+            <span className="text-slate-400 font-mono text-[11px]">%</span>
           </div>
         </div>
 

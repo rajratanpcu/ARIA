@@ -13,6 +13,7 @@ import { aiHypothesisEngine } from '../services/aiHypothesisEngine.ts';
 import { afpSimulationEngine } from '../services/afpSimulationEngine.ts';
 import { ciTestRunnerSimulator } from '../services/ciTestRunnerSimulator.ts';
 import { cryptographicAuditEngine } from '../services/cryptographicAuditEngine.ts';
+import { canaryRolloutEngine } from '../services/canaryRolloutEngine.ts';
 import type { TestCase } from '../types/index.ts';
 
 test('AFP Gating: Rejects confidence below threshold (0.75)', () => {
@@ -227,6 +228,29 @@ test('Cryptographic Audit Engine: Level 4 dual-key cryptographic authorization s
   assert.strictEqual(auth.secondarySigner.role, 'Autonomous Governance Agent');
   assert.ok(auth.signatureChainHash.length > 20);
 });
+
+test('Canary Rollout Engine: Evaluates healthy and anomalous cohort thresholds', () => {
+  // Stage 10%: Healthy telemetry (HTTP error 1.1%, crash 0.05%) -> Gate Passes
+  const healthyCohort = canaryRolloutEngine.evaluateCohort(10, 1.1, 0.05, 142);
+  assert.strictEqual(healthyCohort.status, 'healthy');
+  assert.strictEqual(healthyCohort.canaryGatePassed, true);
+  assert.strictEqual(healthyCohort.gateViolations.length, 0);
+
+  const healthyGate = canaryRolloutEngine.checkCanaryGate(healthyCohort);
+  assert.strictEqual(healthyGate.canAdvance, true);
+  assert.strictEqual(healthyGate.recommendation, 'CONTINUE');
+
+  // Stage 50%: Spiked telemetry (HTTP error 7.8%) -> Critical breach, Hold enforced
+  const anomalousCohort = canaryRolloutEngine.evaluateCohort(50, 7.8, 0.42, 510);
+  assert.strictEqual(anomalousCohort.status, 'critical');
+  assert.strictEqual(anomalousCohort.canaryGatePassed, false);
+  assert.ok(anomalousCohort.gateViolations.length >= 2);
+
+  const anomalyGate = canaryRolloutEngine.checkCanaryGate(anomalousCohort);
+  assert.strictEqual(anomalyGate.canAdvance, false);
+  assert.strictEqual(anomalyGate.recommendation, 'REQUIRE_LEVEL4_ROLLBACK');
+});
+
 
 
 
