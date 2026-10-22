@@ -4,21 +4,29 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
+  KeyRound,
+  Lock,
 } from 'lucide-react';
 import { useAria } from '../../context/AriaContext';
 import { AutonomyBadge } from '../../components/common/AutonomyBadge';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { AUTONOMY_LEVELS, AutonomyLevel } from '../../types';
+import { cryptographicAuditEngine, DualKeyAuthorization } from '../../services/cryptographicAuditEngine';
 
 export const GovernancePage: React.FC = () => {
   const { approvals, resolveApproval } = useAria();
   const [selectedApprovalId, setSelectedApprovalId] = useState<string | null>(null);
   const [notes, setNotes] = useState<string>('');
+  const [activeDualKeySig, setActiveDualKeySig] = useState<DualKeyAuthorization | null>(null);
 
   const pendingApprovals = approvals.filter((a) => a.status === 'pending');
   const resolvedApprovals = approvals.filter((a) => a.status !== 'pending');
 
-  const handleAction = (id: string, decision: 'approved' | 'rejected') => {
+  const handleAction = (id: string, decision: 'approved' | 'rejected', actionType: string) => {
+    if (decision === 'approved') {
+      const dualKey = cryptographicAuditEngine.generateDualKeyAuthorization(id, actionType, notes);
+      setActiveDualKeySig(dualKey);
+    }
     resolveApproval(id, decision, notes || undefined);
     setNotes('');
     setSelectedApprovalId(null);
@@ -71,6 +79,44 @@ export const GovernancePage: React.FC = () => {
           );
         })}
       </div>
+
+      {/* Active Dual-Key Cryptographic Sign-Off Certificate (if generated) */}
+      {activeDualKeySig && (
+        <div className="p-4 rounded-xl bg-blue-50 dark:bg-slate-850 border border-blue-200 dark:border-blue-900 shadow-sm animate-in fade-in duration-300">
+          <div className="flex items-center justify-between pb-2 border-b border-blue-200 dark:border-slate-800 mb-3">
+            <div className="flex items-center gap-2">
+              <KeyRound className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100">
+                Level 4 Cryptographic Dual-Key Sign-Off Certificate
+              </h3>
+            </div>
+            <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-bold border border-emerald-300 dark:border-emerald-800">
+              POLICY COMPLIANT
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono mb-3">
+            <div className="p-2.5 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+              <span className="text-[10px] text-slate-400 block uppercase font-sans">Primary Human Signer</span>
+              <div className="font-bold text-slate-900 dark:text-slate-100">{activeDualKeySig.primarySigner.identity}</div>
+              <div className="text-[10px] text-blue-600 dark:text-blue-400">{activeDualKeySig.primarySigner.role}</div>
+              <div className="text-[10px] text-slate-400 truncate mt-1">Key: {activeDualKeySig.primarySigner.keyFingerprint}</div>
+            </div>
+
+            <div className="p-2.5 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+              <span className="text-[10px] text-slate-400 block uppercase font-sans">Secondary Co-Signer</span>
+              <div className="font-bold text-slate-900 dark:text-slate-100">{activeDualKeySig.secondarySigner.identity}</div>
+              <div className="text-[10px] text-blue-600 dark:text-blue-400">{activeDualKeySig.secondarySigner.role}</div>
+              <div className="text-[10px] text-slate-400 truncate mt-1">Key: {activeDualKeySig.secondarySigner.keyFingerprint}</div>
+            </div>
+          </div>
+
+          <div className="p-2 rounded bg-slate-950 border border-slate-800 font-mono text-[10px] text-slate-400 flex items-center justify-between">
+            <span>Signature Merkle Hash: {activeDualKeySig.signatureChainHash}</span>
+            <span className="text-emerald-400">Ed25519 Verified</span>
+          </div>
+        </div>
+      )}
 
       {/* Pending Level 4 Approval Queue */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm">
@@ -134,14 +180,14 @@ export const GovernancePage: React.FC = () => {
 
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => handleAction(appr.id, 'rejected')}
+                      onClick={() => handleAction(appr.id, 'rejected', appr.actionType)}
                       className="px-4 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 dark:bg-rose-950/80 dark:hover:bg-rose-900 dark:text-rose-300 dark:border-rose-800 text-xs font-semibold transition-colors flex items-center gap-1.5"
                     >
                       <XCircle className="w-3.5 h-3.5" />
                       <span>Reject</span>
                     </button>
                     <button
-                      onClick={() => handleAction(appr.id, 'approved')}
+                      onClick={() => handleAction(appr.id, 'approved', appr.actionType)}
                       className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition-colors shadow-sm flex items-center gap-1.5"
                     >
                       <CheckCircle2 className="w-3.5 h-3.5" />

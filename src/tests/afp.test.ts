@@ -12,6 +12,7 @@ import {
 import { aiHypothesisEngine } from '../services/aiHypothesisEngine.ts';
 import { afpSimulationEngine } from '../services/afpSimulationEngine.ts';
 import { ciTestRunnerSimulator } from '../services/ciTestRunnerSimulator.ts';
+import { cryptographicAuditEngine } from '../services/cryptographicAuditEngine.ts';
 import type { TestCase } from '../types/index.ts';
 
 test('AFP Gating: Rejects confidence below threshold (0.75)', () => {
@@ -186,6 +187,47 @@ test('CI Test Runner Simulator: Simulates test execution and detects elevated re
   assert.ok(failedTest);
   assert.match(failedTest.failureMessage!, /CartItemState schema v14/i);
 });
+
+test('Cryptographic Audit Engine: Validates SHA-256 hash chaining and detects tampering', () => {
+  const events = [
+    { id: 'ev-1', timestamp: '2026-10-22T10:00:00Z', action: 'BUILD_TRIGGER', details: { commit: '7a9e4f2' } },
+    { id: 'ev-2', timestamp: '2026-10-22T10:05:00Z', action: 'TEST_SELECT', details: { testsCount: 847 } },
+    { id: 'ev-3', timestamp: '2026-10-22T10:10:00Z', action: 'AFP_UPDATE', details: { newWeight: 0.648 } },
+  ];
+
+  const ledger = cryptographicAuditEngine.buildLedger(events);
+  assert.strictEqual(ledger.length, 3);
+  assert.strictEqual(ledger[0].previousHash, '0000000000000000000000000000000000000000000000000000000000000000');
+  assert.strictEqual(ledger[1].previousHash, ledger[0].currentHash);
+  assert.strictEqual(ledger[2].previousHash, ledger[1].currentHash);
+
+  // Verification succeeds on untampered chain
+  const ver = cryptographicAuditEngine.verifyChainIntegrity(ledger);
+  assert.strictEqual(ver.valid, true);
+  assert.strictEqual(ver.verifiedBlocks, 3);
+
+  // Tampering detection: modify middle block's previousHash
+  const tamperedLedger = [...ledger];
+  tamperedLedger[1] = { ...tamperedLedger[1], previousHash: 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef' };
+  const tamperedVer = cryptographicAuditEngine.verifyChainIntegrity(tamperedLedger);
+  assert.strictEqual(tamperedVer.valid, false);
+  assert.strictEqual(tamperedVer.tamperedIndex, 1);
+});
+
+test('Cryptographic Audit Engine: Level 4 dual-key cryptographic authorization signature', () => {
+  const auth = cryptographicAuditEngine.generateDualKeyAuthorization(
+    'appr-01',
+    'ROLLBACK',
+    'Authorized rollback after 7.8% 5xx spike'
+  );
+
+  assert.strictEqual(auth.approvalId, 'appr-01');
+  assert.strictEqual(auth.policyCompliant, true);
+  assert.strictEqual(auth.primarySigner.identity, 'raj.ratan@aria.corp');
+  assert.strictEqual(auth.secondarySigner.role, 'Autonomous Governance Agent');
+  assert.ok(auth.signatureChainHash.length > 20);
+});
+
 
 
 
