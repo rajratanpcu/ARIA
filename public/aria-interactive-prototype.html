@@ -1,0 +1,1424 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ARIA — Agentic Release Intelligence & Autonomous Mobile DevOps</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            slate: {
+              750: '#253248',
+              850: '#151f32',
+              950: '#0b1120',
+            },
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              200: '#bfdbfe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              800: '#1e40af',
+              900: '#1e3a8a',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'Menlo', 'monospace'],
+          }
+        }
+      }
+    };
+  </script>
+  <!-- React and ReactDOM -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <!-- Babel Standalone -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: light dark;
+    }
+    html.dark {
+      color-scheme: dark;
+    }
+    html:not(.dark) {
+      color-scheme: light;
+    }
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    html.dark ::-webkit-scrollbar-track {
+      background: #0b1120;
+    }
+    html:not(.dark) ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    html.dark ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 9999px;
+    }
+    html:not(.dark) ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen selection:bg-blue-600 selection:text-white antialiased transition-colors duration-150">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo } = React;
+
+    // --- SEED DATA & CONSTANTS ---
+    const DEFAULT_AFP_PARAMS = {
+      baseline: 0.3,
+      threshold: 0.75,
+      alpha: 0.4,
+      maxWeight: 1.0,
+      lambda: 0.1,
+    };
+
+    const INITIAL_MODULES = [
+      { id: 'mod-checkout-cart', name: 'checkout-cart', path: 'packages/checkout-cart', language: 'TypeScript/Kotlin', loc: 14200, deps: ['payment-gateway', 'analytics-sdk'], currentRisk: 0.3, baselineRisk: 0.3, cacheStatus: 'stale', cachePolicy: 'standard', testCount: 2450 },
+      { id: 'mod-payment-gateway', name: 'payment-gateway', path: 'packages/payment-gateway', language: 'Kotlin/Swift', loc: 9800, deps: ['security-vault'], currentRisk: 0.3, baselineRisk: 0.3, cacheStatus: 'hit', cachePolicy: 'standard', testCount: 1820 },
+      { id: 'mod-analytics-sdk', name: 'analytics-sdk', path: 'packages/analytics-sdk', language: 'TypeScript', loc: 6400, deps: [], currentRisk: 0.3, baselineRisk: 0.3, cacheStatus: 'hit', cachePolicy: 'standard', testCount: 890 },
+      { id: 'mod-user-auth', name: 'user-auth', path: 'packages/user-auth', language: 'Kotlin/Swift', loc: 8100, deps: ['security-vault'], currentRisk: 0.3, baselineRisk: 0.3, cacheStatus: 'hit', cachePolicy: 'standard', testCount: 1540 },
+      { id: 'mod-security-vault', name: 'security-vault', path: 'packages/security-vault', language: 'C++/Rust', loc: 4300, deps: [], currentRisk: 0.3, baselineRisk: 0.3, cacheStatus: 'hit', cachePolicy: 'standard', testCount: 940 },
+      { id: 'mod-catalog-browse', name: 'catalog-browse', path: 'packages/catalog-browse', language: 'React Native', loc: 18500, deps: ['analytics-sdk'], currentRisk: 0.3, baselineRisk: 0.3, cacheStatus: 'hit', cachePolicy: 'standard', testCount: 4700 },
+    ];
+
+    const INITIAL_INCIDENTS = [
+      {
+        id: 'INC-7402',
+        title: 'Checkout Payment Recalculation Failure Spikes at 50% Rollout',
+        severity: 'critical',
+        release: 'v3.2.1-rc4',
+        implicatedModule: 'checkout-cart',
+        moduleId: 'mod-checkout-cart',
+        confidence: 0.87,
+        scenarioType: 'stale_cache_failure',
+        status: 'investigating',
+        detectedAt: '2026-10-21 19:08:42',
+        afpSent: false,
+        hypotheses: [
+          { desc: 'Stale build cache reused across cart serialization schema migration', conf: 0.87, primary: true, evidence: ['Commit #7a9e4f2 altered CartItem schema with non-optional couponMetadata field', 'BIA build report indicated cache HIT on module checkout-cart', 'HTTP 502 deserialization errors matched mutated schema hash'] },
+          { desc: 'Payment Gateway upstream webhook rate limiting during flash-sale surge', conf: 0.22, primary: false, evidence: ['Payment gateway latency was nominal (142ms)', 'Zero upstream 429 status codes recorded'] }
+        ],
+        logs: [
+          '2026-10-21T19:08:12.451Z [FATAL] [checkout-cart] DeserializationError: missing field couponMetadata in CartItemState',
+          '2026-10-21T19:08:12.890Z [ERROR] [checkout-cart] CartPersistenceWorker: corrupted parcel schema detected (expected v14, got v13)',
+          '2026-10-21T19:08:14.102Z [WARN]  [payment-gateway] Aborting charge authorization for invalid cart session 0x8f192b'
+        ]
+      },
+      {
+        id: 'INC-7395',
+        title: 'Background Auth Token Refresh Timeout on Cold Boot',
+        severity: 'major',
+        release: 'v3.2.0',
+        implicatedModule: 'user-auth',
+        moduleId: 'mod-user-auth',
+        confidence: 0.81,
+        scenarioType: 'missing_regression_test',
+        status: 'resolved',
+        detectedAt: '2026-10-12 14:02:10',
+        afpSent: true,
+        hypotheses: [{ desc: 'Missing regression test for Android 14 pending intent flags', conf: 0.81, primary: true, evidence: ['NullPointerException in NotificationTrampolineActivity'] }],
+        logs: ['2026-10-12T14:03:00Z [CRITICAL] [user-auth] java.lang.SecurityException: FLAG_IMMUTABLE required']
+      }
+    ];
+
+    const INITIAL_APPROVALS = [
+      { id: 'appr-01', title: 'Level 4 Rollback: Roll back v3.2.1 rollout from 50% to stable v3.2.0', actionType: 'ROLLBACK', requestedBy: 'DCA', requestedAt: '2026-10-21 19:11:00', rationale: 'Checkout failure rate (7.8%) exceeds safety threshold (3.0%). High customer checkout failure impact.', confidence: 0.93, level: 4, status: 'pending' },
+      { id: 'appr-02', title: 'Level 4 Broad Cache Invalidation: Purge Gradle/Bazel build cache across Tier-1 modules', actionType: 'BROAD_CACHE_INVALIDATION', requestedBy: 'BIA', requestedAt: '2026-10-21 19:16:30', rationale: 'Prevent subsequent builds from inheriting stale checkout-cart or payment-gateway serialized schemas.', confidence: 0.89, level: 4, status: 'pending' }
+    ];
+
+    const INITIAL_AUDIT = [
+      { id: 'aud-1', time: '2026-10-21 14:22:15', cat: 'BUILD', action: 'Commit #7a9e4f2 Received', agent: 'SYSTEM', sev: 'info', lvl: 1, details: 'Elena Vance: Cart state sync and coupon recalculation' },
+      { id: 'aud-2', time: '2026-10-21 14:28:40', cat: 'BUILD', action: 'BIA Reused Build Cache', agent: 'BIA', sev: 'notice', lvl: 2, details: 'Cache hit reused for checkout-cart (85.7% hit rate)' },
+      { id: 'aud-3', time: '2026-10-21 14:35:10', cat: 'TEST_SELECTION', action: 'COA Selected 847 Tests', agent: 'COA', sev: 'info', lvl: 2, details: 'Selected 847 of 12,340 tests based on baseline risk (0.30)' },
+      { id: 'aud-4', time: '2026-10-21 15:30:00', cat: 'RELEASE', action: 'RCA Approved Release v3.2.1', agent: 'RCA', sev: 'info', lvl: 2, details: 'All 4 gating criteria passed (Simulated Artifact Signed)' },
+      { id: 'aud-5', time: '2026-10-21 18:45:00', cat: 'DEPLOYMENT', action: 'DCA Advanced Rollout to 50%', agent: 'DCA', sev: 'notice', lvl: 2, details: '1.1M active users reached' },
+      { id: 'aud-6', time: '2026-10-21 19:10:00', cat: 'DEPLOYMENT', action: 'DCA Paused Rollout (Anomaly)', agent: 'DCA', sev: 'alert', lvl: 4, details: 'Checkout HTTP error spiked to 7.8%' },
+      { id: 'aud-7', time: '2026-10-21 19:12:30', cat: 'INCIDENT', action: 'IRA Triaged INC-7402', agent: 'IRA', sev: 'alert', lvl: 2, details: 'Stale cache in checkout-cart identified (c=0.87)' }
+    ];
+
+    // --- APP ROOT COMPONENT ---
+    function App() {
+      const [theme, setTheme] = useState(() => {
+        const saved = localStorage.getItem('aria_mobile_devops_state_v1_theme');
+        if (saved === 'light' || saved === 'dark') return saved;
+        if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+          return 'light';
+        }
+        return 'dark';
+      });
+
+      useEffect(() => {
+        localStorage.setItem('aria_mobile_devops_state_v1_theme', theme);
+        const root = document.documentElement;
+        if (theme === 'dark') {
+          root.classList.add('dark');
+        } else {
+          root.classList.remove('dark');
+        }
+      }, [theme]);
+
+      const [page, setPage] = useState('overview');
+      const [modules, setModules] = useState(() => {
+        const saved = localStorage.getItem('aria_modules');
+        return saved ? JSON.parse(saved) : INITIAL_MODULES;
+      });
+      const [incidents, setIncidents] = useState(() => {
+        const saved = localStorage.getItem('aria_incidents');
+        return saved ? JSON.parse(saved) : INITIAL_INCIDENTS;
+      });
+      const [approvals, setApprovals] = useState(() => {
+        const saved = localStorage.getItem('aria_approvals');
+        return saved ? JSON.parse(saved) : INITIAL_APPROVALS;
+      });
+      const [auditEvents, setAuditEvents] = useState(() => {
+        const saved = localStorage.getItem('aria_audit');
+        return saved ? JSON.parse(saved) : INITIAL_AUDIT;
+      });
+      const [subsequentTestCount, setSubsequentTestCount] = useState(() => {
+        const saved = localStorage.getItem('aria_test_count');
+        return saved ? JSON.parse(saved) : 847;
+      });
+      const [deploymentStage, setDeploymentStage] = useState(50);
+      const [deploymentStatus, setDeploymentStatus] = useState('in_progress');
+      const [demoModalOpen, setDemoModalOpen] = useState(false);
+      const [demoStep, setDemoStep] = useState(1);
+      const [notification, setNotification] = useState(null);
+
+      // Save to localStorage
+      useEffect(() => {
+        localStorage.setItem('aria_modules', JSON.stringify(modules));
+        localStorage.setItem('aria_incidents', JSON.stringify(incidents));
+        localStorage.setItem('aria_approvals', JSON.stringify(approvals));
+        localStorage.setItem('aria_audit', JSON.stringify(auditEvents));
+        localStorage.setItem('aria_test_count', JSON.stringify(subsequentTestCount));
+      }, [modules, incidents, approvals, auditEvents, subsequentTestCount]);
+
+      const showNotify = (msg) => {
+        setNotification(msg);
+        setTimeout(() => setNotification(null), 6000);
+      };
+
+      const addAudit = (cat, action, agent, sev, lvl, details) => {
+        const entry = {
+          id: 'aud-' + Date.now(),
+          time: new Date().toISOString().replace('T', ' ').substring(0, 19),
+          cat, action, agent, sev, lvl, details
+        };
+        setAuditEvents(prev => [entry, ...prev]);
+      };
+
+      // AFP INCIDENT SIGNAL DISPATCH
+      const sendAfpSignal = (incidentId) => {
+        const inc = incidents.find(i => i.id === incidentId);
+        if (!inc) return;
+        if (inc.afpSent) {
+          showNotify('AFP signal already processed for ' + inc.id);
+          return;
+        }
+
+        // Gating Check: c >= 0.75
+        if (inc.confidence < 0.75) {
+          addAudit('AFP', 'AFP-INCIDENT Rejected', 'IRA', 'warning', 3, 'Confidence ' + inc.confidence + ' < 0.75 threshold. Gated.');
+          showNotify('AFP Gating Rejected: Confidence ' + inc.confidence + ' is below 0.75 threshold.');
+          return;
+        }
+
+        // Compute new weight: min(1.0, current + c * 0.4)
+        const targetMod = modules.find(m => m.id === inc.moduleId);
+        const prevW = targetMod ? targetMod.currentRisk : 0.3;
+        const newW = Number(Math.min(1.0, prevW + inc.confidence * 0.4).toFixed(3)); // 0.3 + 0.87*0.4 = 0.648
+
+        // Update module
+        setModules(prev => prev.map(m => m.id === inc.moduleId ? { ...m, currentRisk: newW, cachePolicy: 'strict_invalidation' } : m));
+        setIncidents(prev => prev.map(i => i.id === incidentId ? { ...i, afpSent: true, status: 'mitigating' } : i));
+        setSubsequentTestCount(1334); // Expanded suite!
+
+        addAudit('AFP', 'AFP-INCIDENT Signal Dispatched', 'IRA', 'notice', 3, 'Updated ' + inc.implicatedModule + ' risk ' + prevW + ' -> ' + newW + ' (c=' + inc.confidence + ')');
+        addAudit('AFP', 'AFP-ACK Acknowledged', 'BIA', 'info', 3, 'Enforced strict cache invalidation; expanded CI tests to 1,334');
+
+        showNotify('AFP update accepted: checkout-cart risk increased from ' + prevW + ' to ' + newW + '. Test suite expanded to 1,334 tests.');
+      };
+
+      // EXPONENTIAL DECAY SIMULATION
+      const applyDecay = (days) => {
+        setModules(prev => prev.map(m => {
+          if (m.currentRisk <= m.baselineRisk) return m;
+          const excess = m.currentRisk - m.baselineRisk;
+          const decayedExcess = excess * Math.exp(-0.1 * days);
+          const newRisk = Number(Math.max(m.baselineRisk, m.baselineRisk + decayedExcess).toFixed(3));
+          return {
+            ...m,
+            currentRisk: newRisk,
+            cachePolicy: newRisk > 0.5 ? 'strict_invalidation' : 'standard'
+          };
+        }));
+        if (days >= 30) {
+          setSubsequentTestCount(847);
+        }
+        addAudit('AFP', 'AFP-DECAY Applied', 'ORCHESTRATOR', 'info', 1, 'Decayed risk across modules for ' + days + ' incident-free days.');
+        showNotify('Simulated ' + days + ' days of incident-free operation. Risk weights decayed.');
+      };
+
+      // APPROVALS
+      const handleApproval = (id, decision) => {
+        setApprovals(prev => prev.map(a => a.id === id ? { ...a, status: decision, resolvedBy: 'Raj Ratan (DevOps Lead)', resolvedAt: new Date().toISOString().replace('T', ' ').substring(0, 19) } : a));
+        if (id === 'appr-01' && decision === 'approved') {
+          setDeploymentStatus('rolled_back');
+          setDeploymentStage(0);
+          addAudit('GOVERNANCE', 'Rollback Executed', 'HUMAN', 'alert', 4, 'Rollback to v3.2.0 authorized by Raj Ratan');
+          showNotify('Rollback to v3.2.0 authorized and executed.');
+        } else {
+          addAudit('GOVERNANCE', 'Approval Decision: ' + decision, 'HUMAN', 'info', 4, 'Approval ' + id + ' set to ' + decision);
+          showNotify('Approval request ' + id + ' ' + decision);
+        }
+      };
+
+      const resetAll = () => {
+        localStorage.clear();
+        setModules(INITIAL_MODULES);
+        setIncidents(INITIAL_INCIDENTS);
+        setApprovals(INITIAL_APPROVALS);
+        setAuditEvents(INITIAL_AUDIT);
+        setSubsequentTestCount(847);
+        setDeploymentStage(50);
+        setDeploymentStatus('in_progress');
+        setDemoStep(1);
+        showNotify('Prototype state reset to baseline.');
+      };
+
+      const cartMod = modules.find(m => m.id === 'mod-checkout-cart');
+      const isAfpElevated = cartMod ? cartMod.currentRisk > 0.3 : false;
+      const pendingApprCount = approvals.filter(a => a.status === 'pending').length;
+
+      return (
+        <div className="flex h-screen overflow-hidden bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
+          {/* SIDEBAR */}
+          <aside className="w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col justify-between p-4 flex-shrink-0 z-20 shadow-sm">
+            <div>
+              <div className="flex items-center gap-3 px-2 py-3 mb-6 border-b border-slate-200 dark:border-slate-800">
+                <div className="w-9 h-9 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-base shadow-sm">
+                  A
+                </div>
+                <div>
+                  <div className="font-bold tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-1.5 text-sm">
+                    ARIA
+                    <span className="text-[10px] px-1.5 py-0.2 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded font-mono font-medium">v1.0</span>
+                  </div>
+                  <div className="text-[10px] text-slate-500 dark:text-slate-400">Mobile DevOps Intelligence</div>
+                </div>
+              </div>
+
+              <nav className="space-y-1 text-xs font-medium">
+                {[
+                  { id: 'overview', label: 'Overview Dashboard', icon: '📊' },
+                  { id: 'agents', label: '5-Agent Control Center', icon: '🤖' },
+                  { id: 'builds', label: 'Build Intelligence', icon: '🔨' },
+                  { id: 'ci-tests', label: 'CI & Test Selection', icon: '🧪' },
+                  { id: 'releases', label: 'Release & Rollout', icon: '🚀' },
+                  { id: 'incidents', label: 'Incident Intelligence', icon: '⚠️', badge: incidents.filter(i=>!i.resolvedAt).length },
+                  { id: 'afp', label: 'AFP Protocol Engine', icon: '⚡', highlight: isAfpElevated },
+                  { id: 'governance', label: 'Governance & Approvals', icon: '🛡️', badge: pendingApprCount, badgeColor: 'bg-amber-600' },
+                  { id: 'audit', label: 'Immutable Audit Log', icon: '📜' },
+                ].map(item => (
+                  <button
+                    key={item.id}
+                    onClick={() => setPage(item.id)}
+                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors ${
+                      page === item.id
+                        ? 'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800 font-semibold'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/60'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <span>{item.icon}</span>
+                      <span>{item.label}</span>
+                    </div>
+                    {item.badge > 0 && (
+                      <span className={`${item.badgeColor || 'bg-rose-600'} text-white text-[10px] font-bold px-1.5 py-0.2 rounded-full`}>
+                        {item.badge}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </nav>
+            </div>
+
+            <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 text-xs">
+              <div className="text-slate-500 dark:text-slate-400 font-mono text-[11px] mb-1">Target: Mobile SuperApp</div>
+              <div className="text-[10px] text-slate-500 dark:text-slate-400">Closed Loop: <span className="text-emerald-600 dark:text-emerald-400 font-bold">Active</span></div>
+            </div>
+          </aside>
+
+          {/* MAIN CONTENT AREA */}
+          <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+            {/* TOP HEADER BAR */}
+            <header className="h-16 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur px-6 flex items-center justify-between flex-shrink-0 z-10 shadow-sm">
+              <div className="flex items-center gap-3">
+                <span className="text-xs px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 font-semibold">
+                  📱 RetailGo Mobile (release/v3.2.1)
+                </span>
+                <span className="hidden sm:inline-flex text-[11px] px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800 font-medium">
+                  Autonomy Level 3 (Bounded Active)
+                </span>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-lg bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 text-xs font-mono">
+                  <span className="text-slate-500 dark:text-slate-400">checkout-cart Risk:</span>
+                  <span className={`font-bold ${isAfpElevated ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                    {cartMod ? cartMod.currentRisk.toFixed(3) : '0.300'}
+                  </span>
+                </div>
+
+                {/* Theme Mode Toggle Button */}
+                <button
+                  onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 text-xs font-medium transition-colors shadow-sm"
+                  title={theme === 'dark' ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
+                >
+                  {theme === 'dark' ? '☀️ Light' : '🌙 Dark'}
+                </button>
+
+                <button
+                  onClick={() => setDemoModalOpen(true)}
+                  className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-sm transition-colors"
+                >
+                  ▶ Run Demo Scenario
+                </button>
+
+                <button
+                  onClick={() => { if (confirm('Reset prototype scenario to baseline?')) resetAll(); }}
+                  className="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs border border-slate-200 dark:border-slate-700 font-medium transition-colors"
+                >
+                  🔄 Reset
+                </button>
+              </div>
+            </header>
+
+            {/* NOTIFICATION TOAST */}
+            {notification && (
+              <div className="bg-blue-50 dark:bg-blue-950 border-b border-blue-200 dark:border-blue-800 px-6 py-2.5 text-xs text-blue-800 dark:text-blue-200 flex items-center justify-between">
+                <span>⚡ {notification}</span>
+                <button onClick={() => setNotification(null)} className="text-blue-700 dark:text-blue-400 font-bold ml-4">✕</button>
+              </div>
+            )}
+
+            {/* SCROLLABLE BODY */}
+            <main className="flex-1 overflow-y-auto p-6 space-y-6">
+              {/* PAGE ROUTING */}
+              {page === 'overview' && (
+                <OverviewView
+                  modules={modules}
+                  incidents={incidents}
+                  approvals={approvals}
+                  subsequentTestCount={subsequentTestCount}
+                  deploymentStage={deploymentStage}
+                  deploymentStatus={deploymentStatus}
+                  isAfpElevated={isAfpElevated}
+                  setPage={setPage}
+                />
+              )}
+
+              {page === 'agents' && <AgentsView modules={modules} subsequentTestCount={subsequentTestCount} />}
+              {page === 'builds' && <BuildsView modules={modules} />}
+              {page === 'ci-tests' && <CiTestsView modules={modules} subsequentTestCount={subsequentTestCount} isAfpElevated={isAfpElevated} />}
+              {page === 'releases' && (
+                <ReleasesView
+                  stage={deploymentStage}
+                  status={deploymentStatus}
+                  onAdvance={() => setDeploymentStage(prev => prev < 100 ? (prev === 2 ? 10 : prev === 10 ? 50 : 100) : 100)}
+                  onPause={() => setDeploymentStatus('paused')}
+                  onRequestRollback={() => {
+                    handleApproval('appr-01', 'pending');
+                    setPage('governance');
+                    showNotify('Level 4 Rollback request created! Authorize in Governance queue.');
+                  }}
+                />
+              )}
+              {page === 'incidents' && (
+                <IncidentsView
+                  incidents={incidents}
+                  onSendAfp={sendAfpSignal}
+                />
+              )}
+              {page === 'afp' && (
+                <AfpView
+                  modules={modules}
+                  onSendAfp={sendAfpSignal}
+                  onDecay={applyDecay}
+                  subsequentTestCount={subsequentTestCount}
+                  isAfpElevated={isAfpElevated}
+                />
+              )}
+              {page === 'governance' && (
+                <GovernanceView
+                  approvals={approvals}
+                  onResolve={handleApproval}
+                />
+              )}
+              {page === 'audit' && <AuditView auditEvents={auditEvents} />}
+            </main>
+          </div>
+
+          {/* GUIDED DEMO MODAL */}
+          {demoModalOpen && (
+            <DemoModal
+              step={demoStep}
+              onSetStep={setDemoStep}
+              onClose={() => setDemoModalOpen(false)}
+              onSendAfp={sendAfpSignal}
+              onReset={resetAll}
+              isAfpElevated={isAfpElevated}
+              subsequentTestCount={subsequentTestCount}
+              modules={modules}
+            />
+          )}
+        </div>
+      );
+    }
+
+    // --- OVERVIEW VIEW ---
+    function OverviewView({ modules, incidents, approvals, subsequentTestCount, deploymentStage, deploymentStatus, isAfpElevated, setPage }) {
+      const openInc = incidents.filter(i => !i.resolvedAt).length;
+      const pendingAppr = approvals.filter(a => a.status === 'pending').length;
+      const avgRisk = (modules.reduce((s, m) => s + m.currentRisk, 0) / modules.length).toFixed(3);
+
+      return (
+        <div className="space-y-6">
+          <div className="pb-2 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Overview Dashboard</h1>
+              <p className="text-xs text-slate-500 dark:text-slate-400">High-level telemetry of the autonomous mobile release pipeline</p>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => setPage('incidents')} className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-colors">
+                ⚠️ Incidents ({openInc})
+              </button>
+              <button onClick={() => setPage('afp')} className="px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 dark:bg-blue-950 dark:hover:bg-blue-900/80 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-xs font-semibold transition-colors">
+                ⚡ AFP Engine
+              </button>
+            </div>
+          </div>
+
+          {/* PIPELINE VISUALIZER */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm">
+            <div className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-blue-600"></span>
+              Closed-Loop Autonomous DevOps Pipeline
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 text-xs">
+              {[
+                { title: '1. Commit', desc: 'commit #7a9e4f2', status: 'done', color: 'border-emerald-200 bg-emerald-50/70 text-emerald-800 dark:border-emerald-800/80 dark:bg-emerald-950/20 dark:text-emerald-300' },
+                { title: '2. Build Intel', desc: isAfpElevated ? 'Strict Invalidation' : 'Cache Hit Reused', status: 'done', color: 'border-emerald-200 bg-emerald-50/70 text-emerald-800 dark:border-emerald-800/80 dark:bg-emerald-950/20 dark:text-emerald-300' },
+                { title: '3. CI Selection', desc: subsequentTestCount + ' / 12,340 tests', status: 'done', color: isAfpElevated ? 'border-blue-300 bg-blue-50/70 text-blue-800 dark:border-blue-800/80 dark:bg-blue-950/30 dark:text-blue-300' : 'border-emerald-200 bg-emerald-50/70 text-emerald-800 dark:border-emerald-800/80 dark:bg-emerald-950/20 dark:text-emerald-300' },
+                { title: '4. Release Gate', desc: 'v3.2.1-rc4 Signed', status: 'done', color: 'border-emerald-200 bg-emerald-50/70 text-emerald-800 dark:border-emerald-800/80 dark:bg-emerald-950/20 dark:text-emerald-300' },
+                { title: '5. Deployment', desc: deploymentStage + '% Staged (' + deploymentStatus + ')', status: 'warn', color: 'border-amber-300 bg-amber-50/70 text-amber-800 dark:border-amber-800/80 dark:bg-amber-950/30 dark:text-amber-300' },
+                { title: '6. Incident Intel', desc: 'INC-7402 (c=0.87)', status: 'crit', color: 'border-rose-300 bg-rose-50/80 text-rose-800 dark:border-rose-800/80 dark:bg-rose-950/40 dark:text-rose-300' },
+                { title: '7. AFP Feedback', desc: isAfpElevated ? 'Risk: 0.648 (Active)' : 'Baseline: 0.300', status: 'afp', color: isAfpElevated ? 'border-blue-400 bg-blue-50 text-blue-800 dark:border-blue-700 dark:bg-blue-950/50 dark:text-blue-300' : 'border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400' },
+              ].map((s, i) => (
+                <div key={i} className={`p-3 rounded-lg border ${s.color}`}>
+                  <div className="font-bold text-[11px] mb-1">{s.title}</div>
+                  <div className="font-mono text-[10px]">{s.desc}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 8 KPI CARDS */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+              <span className="text-[10px] uppercase text-slate-500 dark:text-slate-400 font-mono">Current Release</span>
+              <div className="text-xl font-bold font-mono text-slate-900 dark:text-slate-100 mt-1">v3.2.1</div>
+              <span className="text-xs text-amber-700 dark:text-amber-400">Stage: {deploymentStage}% ({deploymentStatus})</span>
+            </div>
+
+            <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+              <span className="text-[10px] uppercase text-slate-500 dark:text-slate-400 font-mono">Build Success Rate</span>
+              <div className="text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-1">96.4%</div>
+              <span className="text-xs text-slate-500 dark:text-slate-400">Cache hit rate: 85.7%</span>
+            </div>
+
+            <div className={`p-4 rounded-xl bg-white dark:bg-slate-900 border shadow-sm ${isAfpElevated ? 'border-blue-500 ring-1 ring-blue-500/30' : 'border-slate-200 dark:border-slate-800'}`}>
+              <span className="text-[10px] uppercase text-slate-500 dark:text-slate-400 font-mono">CI Test Selection</span>
+              <div className="text-xl font-bold font-mono text-blue-700 dark:text-blue-400 mt-1">{subsequentTestCount} <span className="text-xs text-slate-400 dark:text-slate-500">/ 12,340</span></div>
+              <span className="text-xs text-emerald-600 dark:text-emerald-400">{isAfpElevated ? 'AFP Elevated (+487 tests)' : '93.1% CI duration cut'}</span>
+            </div>
+
+            <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+              <span className="text-[10px] uppercase text-slate-500 dark:text-slate-400 font-mono">Open Incidents</span>
+              <div className="text-xl font-bold font-mono text-rose-600 dark:text-rose-400 mt-1">{openInc}</div>
+              <span className="text-xs text-rose-700 dark:text-rose-300">INC-7402 Critical Triaged</span>
+            </div>
+
+            <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+              <span className="text-[10px] uppercase text-slate-500 dark:text-slate-400 font-mono">Mean Time To Resolution</span>
+              <div className="text-xl font-bold font-mono text-slate-900 dark:text-slate-100 mt-1">14.2 min</div>
+              <span className="text-xs text-emerald-600 dark:text-emerald-400">-68% MTTR vs manual triage</span>
+            </div>
+
+            <div className={`p-4 rounded-xl bg-white dark:bg-slate-900 border shadow-sm ${isAfpElevated ? 'border-blue-500 ring-1 ring-blue-500/30' : 'border-slate-200 dark:border-slate-800'}`}>
+              <span className="text-[10px] uppercase text-slate-500 dark:text-slate-400 font-mono">Average Module Risk</span>
+              <div className="text-xl font-bold font-mono text-slate-900 dark:text-slate-100 mt-1">{avgRisk}</div>
+              <span className="text-xs text-slate-500 dark:text-slate-400">{isAfpElevated ? 'checkout-cart: 0.648' : 'All modules baseline 0.3'}</span>
+            </div>
+
+            <div className={`p-4 rounded-xl bg-white dark:bg-slate-900 border shadow-sm ${pendingAppr > 0 ? 'border-amber-500 ring-1 ring-amber-500/30' : 'border-slate-200 dark:border-slate-800'}`}>
+              <span className="text-[10px] uppercase text-slate-500 dark:text-slate-400 font-mono">Pending Approvals</span>
+              <div className="text-xl font-bold font-mono text-amber-700 dark:text-amber-400 mt-1">{pendingAppr}</div>
+              <span className="text-xs text-amber-700 dark:text-amber-300">Level 4 Human Gate</span>
+            </div>
+
+            <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+              <span className="text-[10px] uppercase text-slate-500 dark:text-slate-400 font-mono">Defect Detection Model</span>
+              <div className="text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-1">{isAfpElevated ? '98.8%' : '92.6%'}</div>
+              <span className="text-xs text-slate-500 dark:text-slate-400">Statistical model estimate</span>
+            </div>
+          </div>
+
+          {/* MODULE RISK WEIGHTS LIST */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 mb-4">
+              Module Risk Weights & Cache Policies (Regulated by AFP)
+            </h2>
+            <div className="space-y-3">
+              {modules.map(mod => (
+                <div key={mod.id} className={`p-3.5 rounded-lg border ${mod.currentRisk > 0.5 ? 'border-rose-200 bg-rose-50/70 dark:border-rose-900/80 dark:bg-rose-950/20' : 'border-slate-200 bg-slate-50/70 dark:border-slate-800 dark:bg-slate-850/60'}`}>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs font-bold text-slate-900 dark:text-slate-100">{mod.name}</span>
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400">({mod.language})</span>
+                      {mod.currentRisk > 0.5 && <span className="text-[9px] bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 px-1.5 py-0.2 rounded border border-rose-300 dark:border-rose-800 font-bold">AFP Elevated</span>}
+                    </div>
+                    <div className="flex items-center gap-2 text-[10px] font-mono">
+                      <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-blue-700 dark:text-blue-300 border border-slate-200 dark:border-slate-700">policy: {mod.cachePolicy}</span>
+                      <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">cache: {mod.cacheStatus}</span>
+                    </div>
+                  </div>
+
+                  {/* Progress bar */}
+                  <div className="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-2 relative overflow-hidden">
+                    <div className="absolute left-[30%] top-0 bottom-0 w-0.5 bg-slate-400" title="Baseline 0.3"></div>
+                    <div className="absolute left-[75%] top-0 bottom-0 w-0.5 bg-rose-400" title="Threshold 0.75"></div>
+                    <div className={`h-2 rounded-full transition-all duration-500 ${mod.currentRisk > 0.5 ? 'bg-rose-500' : 'bg-emerald-500'}`} style={{ width: `${mod.currentRisk * 100}%` }}></div>
+                  </div>
+
+                  <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 font-mono">
+                    <span>Weight: <strong className="text-slate-800 dark:text-slate-200">{mod.currentRisk.toFixed(3)}</strong> (baseline 0.3)</span>
+                    <span>Test Suite: {mod.testCount} tests</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // --- AGENTS VIEW ---
+    function AgentsView({ modules, subsequentTestCount }) {
+      const [selAgent, setSelAgent] = useState('BIA');
+
+      const agents = [
+        { id: 'BIA', name: 'Build Intelligence Agent', stage: 'Code Commit & Build Compilation', status: 'recommending', conf: 0.88, resp: 'Analyzes changed modules, dependency graphs, and build-cache state; recommends cache reuse vs invalidation.', action: 'Recommended build cache reuse for checkout-cart (85.7% hit)' },
+        { id: 'COA', name: 'CI Orchestration Agent', stage: 'Continuous Integration & Testing', status: 'recommending', conf: 0.91, resp: 'Ranks tests via module changes, failure history, risk weights, and execution cost. Recommends prioritized test suites.', action: 'Selected ' + subsequentTestCount + ' of 12,340 tests (93.1% CI duration reduction)' },
+        { id: 'RCA', name: 'Release Coordination Agent', stage: 'Artifact Packaging & Release Gatekeeping', status: 'idle', conf: 0.96, resp: 'Manages release candidates, artifact readiness, signing status, release checklists, and detects policy violations.', action: 'Verified release candidate v3.2.1 checklist: all 4 gating checks passed (Simulated Artifact Signed)' },
+        { id: 'DCA', name: 'Deployment Coordination Agent', stage: 'Staged Rollout & Runtime Monitoring', status: 'recommending', conf: 0.93, resp: 'Monitors staged rollouts (2% -> 10% -> 50% -> 100%), evaluates health metrics, and recommends continue, pause, or rollback.', action: 'Detected checkout error spike (7.8%) at 50% stage; recommended immediate PAUSE and Level 4 ROLLBACK' },
+        { id: 'IRA', name: 'Incident Resolution Agent', stage: 'Incident Triage & ARIA Feedback Protocol (AFP)', status: 'analyzing', conf: 0.87, resp: 'Correlates incidents with modules, builds, and tests. Dispatches attributable AFP-INCIDENT signals to BIA and COA.', action: 'Triaged INC-7402: Implicated checkout-cart with confidence 0.87. Formatted AFP-INCIDENT message.' },
+      ];
+
+      const active = agents.find(a => a.id === selAgent) || agents[0];
+
+      return (
+        <div className="space-y-6">
+          <div className="pb-2 border-b border-slate-200 dark:border-slate-800">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">5-Agent Control Center</h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Autonomous multi-agent orchestration for mobile DevOps lifecycle</p>
+          </div>
+
+          <div className="p-3.5 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300 shadow-sm">
+            <strong className="text-slate-900 dark:text-slate-100">Simulated Autonomy Notice:</strong> Agents operate via deterministic rule-based algorithms and simulated telemetry. Artifact signing, production rollouts, and build cache operations are simulated for academic demonstration.
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            {agents.map(a => (
+              <div
+                key={a.id}
+                onClick={() => setSelAgent(a.id)}
+                className={`p-4 rounded-xl border cursor-pointer transition-all shadow-sm ${
+                  selAgent === a.id
+                    ? 'border-blue-500 bg-blue-50/60 dark:border-blue-600 dark:bg-slate-850 ring-1 ring-blue-500/30'
+                    : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                }`}
+              >
+                <div className="flex justify-between items-center mb-2">
+                  <span className="font-mono font-bold text-sm text-slate-900 dark:text-slate-100">{a.id}</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 border border-blue-200 dark:border-blue-800 font-semibold">{a.status}</span>
+                </div>
+                <div className="text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1 truncate">{a.name}</div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2 mb-3">{a.resp}</p>
+                <div className="text-[11px] font-mono text-blue-700 dark:text-blue-400 pt-2 border-t border-slate-200 dark:border-slate-800">
+                  Confidence: {(a.conf * 100).toFixed(0)}%
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm space-y-4">
+            <div className="flex justify-between items-start pb-4 border-b border-slate-200 dark:border-slate-800">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">{active.name} ({active.id})</h2>
+                <span className="text-xs text-slate-500 dark:text-slate-400">Lifecycle Stage: {active.stage}</span>
+              </div>
+              <div className="text-right font-mono text-xs">
+                <span className="text-slate-500 dark:text-slate-400 block text-[10px]">Confidence</span>
+                <span className="text-blue-700 dark:text-blue-400 font-bold">{(active.conf * 100).toFixed(1)}%</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+              <div className="p-4 rounded-lg bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800">
+                <span className="font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider text-[10px] block mb-2">Ingestion Contract</span>
+                <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
+                  Consumes git AST diffs, module hashes, dependency graphs, remote build-cache indexes, and attributable AFP feedback signals.
+                </p>
+              </div>
+              <div className="p-4 rounded-lg bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800">
+                <span className="font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider text-[10px] block mb-2">Delivery Contract</span>
+                <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
+                  Produces actionable directives: build cache invalidation, prioritized test suites, gating manifests, and AFP-ACK responses.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-lg bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 text-xs">
+              <span className="text-slate-500 dark:text-slate-400 block text-[10px] uppercase font-mono mb-1">Most Recent Action:</span>
+              <span className="font-mono text-slate-800 dark:text-slate-200">{active.action}</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // --- BUILDS VIEW ---
+    function BuildsView({ modules }) {
+      return (
+        <div className="space-y-6">
+          <div className="pb-2 border-b border-slate-200 dark:border-slate-800">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Build Intelligence & Cache Governance</h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400">BIA subsystem: Analyzes commit diffs, module dependency trees, and build cache integrity</p>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 mb-3">Evaluated Commit: #7a9e4f2</h2>
+            <p className="text-xs text-slate-700 dark:text-slate-300 font-mono mb-4">feat(checkout): optimize cart state sync and coupon recalculation pipeline</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs font-mono p-3 rounded-lg bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 mb-4">
+              <div><span className="text-slate-500 dark:text-slate-400 block text-[10px]">Author:</span> Elena Vance</div>
+              <div><span className="text-slate-500 dark:text-slate-400 block text-[10px]">Touched Modules:</span> checkout-cart, payment-gateway, analytics-sdk</div>
+              <div><span className="text-slate-500 dark:text-slate-400 block text-[10px]">Diff Stat:</span> +342 / -89 (14 files)</div>
+              <div><span className="text-slate-500 dark:text-slate-400 block text-[10px]">BIA Risk Assessment:</span> 0.42 (Moderate)</div>
+            </div>
+
+            <div className="p-4 rounded-lg bg-blue-50/70 border border-blue-200 dark:bg-blue-950/30 dark:border-blue-800 text-xs">
+              <span className="font-bold text-blue-800 dark:text-blue-300 block mb-1">BIA Cache Recommendation:</span>
+              <p className="text-slate-700 dark:text-slate-300 leading-relaxed">
+                Cache hit reused for checkout-cart build artifact based on identical direct inputs. (Note: Under AFP strict_invalidation policy, this cache reuse is automatically blocked on subsequent builds to prevent stale serialization regressions).
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 mb-3">Module Dependency Graph</h2>
+            <div className="p-4 rounded-lg bg-slate-50 dark:bg-slate-850 font-mono text-xs text-slate-700 dark:text-slate-300 space-y-2 border border-slate-200 dark:border-slate-800">
+              <div className="text-blue-700 dark:text-blue-400 font-bold">checkout-cart</div>
+              <div className="pl-4 border-l-2 border-slate-300 dark:border-slate-700 space-y-1 text-slate-500 dark:text-slate-400">
+                <div>↳ payment-gateway (direct)</div>
+                <div>↳ analytics-sdk (direct)</div>
+                <div>&nbsp;&nbsp;↳ security-vault (transitive via payment)</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // --- CI TESTS VIEW ---
+    function CiTestsView({ modules, subsequentTestCount, isAfpElevated }) {
+      const [isRunning, setIsRunning] = useState(false);
+      const [progress, setProgress] = useState(0);
+      const [runResult, setRunResult] = useState(null);
+
+      const executeTests = () => {
+        setIsRunning(true);
+        setProgress(20);
+        const intv = setInterval(() => {
+          setProgress(p => {
+            if (p >= 85) { clearInterval(intv); return 85; }
+            return p + 25;
+          });
+        }, 150);
+
+        setTimeout(() => {
+          clearInterval(intv);
+          setProgress(100);
+          setIsRunning(false);
+          setRunResult({
+            executed: isAfpElevated ? 1334 : 847,
+            passed: isAfpElevated ? 1333 : 847,
+            failed: isAfpElevated ? 1 : 0,
+            quarantined: 2,
+            duration: isAfpElevated ? '6.8s' : '4.2s',
+            failureMsg: isAfpElevated ? 'AssertionError in test_checkout_cart_stale_cache_sync: Expected CartItemState schema v14, found cached v13 parcel.' : null
+          });
+        }, 850);
+      };
+
+      return (
+        <div className="space-y-6">
+          <div className="pb-2 border-b border-slate-200 dark:border-slate-800">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">CI Orchestration & Test Selection</h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400">COA subsystem: Selects and prioritizes targeted test suites using failure history and AFP risk weights</p>
+          </div>
+
+          <div className="p-3.5 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300 shadow-sm">
+            <strong className="text-slate-900 dark:text-slate-100">Model Estimate Disclaimer:</strong> Predicted defect detection and risk coverage metrics are statistical model estimates computed from historical mutation tests, not measured production outcomes.
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-slate-200 dark:border-slate-800">
+              <div>
+                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">COA Suite Selection Comparison</h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {isAfpElevated ? 'AFP Elevated Suite: Included +487 checkout-cart regression tests.' : 'Baseline Suite: Pruned non-impacted tests to optimize mobile CI duration.'}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={executeTests}
+                  disabled={isRunning}
+                  className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-sm transition-colors disabled:opacity-50"
+                >
+                  {isRunning ? 'Running Tests...' : '▶ Execute Selected Tests'}
+                </button>
+                <span className={`text-xs px-3 py-1 rounded-full font-mono font-bold border ${isAfpElevated ? 'bg-rose-50 text-rose-700 border-rose-300 dark:bg-rose-950 dark:text-rose-300 dark:border-rose-800' : 'bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800'}`}>
+                  {isAfpElevated ? '1,334 Tests Selected' : '847 Tests Selected'}
+                </span>
+              </div>
+            </div>
+
+            {isRunning && (
+              <div className="mb-4">
+                <div className="flex justify-between text-xs font-mono text-slate-500 dark:text-slate-400 mb-1">
+                  <span>Executing test runner workers across mobile matrices...</span>
+                  <span>{progress}%</span>
+                </div>
+                <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+                  <div className="bg-blue-600 h-2 rounded-full transition-all duration-200" style={{ width: `${progress}%` }}></div>
+                </div>
+              </div>
+            )}
+
+            {runResult && (
+              <div className="mb-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 animate-in fade-in duration-300">
+                <div className="flex justify-between items-center pb-2 border-b border-slate-200 dark:border-slate-800 mb-3 text-xs">
+                  <span className="font-bold text-slate-900 dark:text-slate-100">✓ Test Suite Run Complete</span>
+                  <span className="font-mono text-slate-500 dark:text-slate-400">Duration: {runResult.duration} (Parallel Speedup: 6.2x)</span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
+                  <div className="p-2.5 rounded bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800">
+                    <span className="text-emerald-700 dark:text-emerald-300 block text-[10px] uppercase font-sans">Passed</span>
+                    <span className="text-lg font-bold text-emerald-800 dark:text-emerald-200">{runResult.passed}</span>
+                  </div>
+                  <div className="p-2.5 rounded bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800">
+                    <span className="text-rose-700 dark:text-rose-300 block text-[10px] uppercase font-sans">Failed Regressions</span>
+                    <span className="text-lg font-bold text-rose-800 dark:text-rose-200">{runResult.failed}</span>
+                  </div>
+                  <div className="p-2.5 rounded bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800">
+                    <span className="text-amber-700 dark:text-amber-300 block text-[10px] uppercase font-sans">Quarantined Flakes</span>
+                    <span className="text-lg font-bold text-amber-800 dark:text-amber-200">{runResult.quarantined}</span>
+                  </div>
+                  <div className="p-2.5 rounded bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800">
+                    <span className="text-blue-700 dark:text-blue-300 block text-[10px] uppercase font-sans">Total Executed</span>
+                    <span className="text-lg font-bold text-blue-800 dark:text-blue-200">{runResult.executed}</span>
+                  </div>
+                </div>
+                {runResult.failed > 0 && (
+                  <div className="mt-3 p-3 rounded bg-rose-100/80 dark:bg-rose-950 border border-rose-300 dark:border-rose-800 text-xs text-rose-900 dark:text-rose-200 font-mono">
+                    <strong>Regression Caught by Expanded Suite:</strong> {runResult.failureMsg}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs font-mono">
+              <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800">
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 block uppercase font-medium">Selected / Total</span>
+                <div className="text-lg font-bold text-blue-700 dark:text-blue-400 mt-1">{subsequentTestCount} / 12,340</div>
+                <span className="text-emerald-600 dark:text-emerald-400 font-sans">{isAfpElevated ? '89.2% pruned' : '93.1% pruned'}</span>
+              </div>
+              <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800">
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 block uppercase font-medium">Estimated CI Time</span>
+                <div className="text-lg font-bold text-slate-900 dark:text-slate-100 mt-1">{isAfpElevated ? '6.8 min' : '4.2 min'}</div>
+                <span className="text-emerald-600 dark:text-emerald-400 font-sans">vs 48.5 min full</span>
+              </div>
+              <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800">
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 block uppercase font-medium">Risk Coverage</span>
+                <div className="text-lg font-bold text-blue-700 dark:text-blue-400 mt-1">{isAfpElevated ? '99.4%' : '94.2%'}</div>
+                <span className="text-slate-500 dark:text-slate-400 font-sans">Model estimate</span>
+              </div>
+              <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800">
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 block uppercase font-medium">Defect Detection</span>
+                <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400 mt-1">{isAfpElevated ? '98.8%' : '92.6%'}</div>
+                <span className="text-slate-500 dark:text-slate-400 font-sans">Model estimate</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // --- RELEASES VIEW ---
+    function ReleasesView({ stage, status, onAdvance, onPause, onRequestRollback }) {
+      const stages = [2, 10, 50, 100];
+      return (
+        <div className="space-y-6">
+          <div className="pb-2 border-b border-slate-200 dark:border-slate-800">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Release Gatekeeping & Staged Rollout</h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400">RCA & DCA subsystems: Controls staged rollout cohorts across mobile user populations</p>
+          </div>
+
+          <div className="p-3.5 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300 shadow-sm">
+            <strong className="text-slate-900 dark:text-slate-100">Simulated Deployment:</strong> Staged rollout percentages, telemetry anomalies, and crash rates are simulated within the local runtime model.
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Release v3.2.1-rc4 Rollout</h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Current Stage: {stage}% ({status})</p>
+              </div>
+              <div className="flex gap-2">
+                {status !== 'paused' && status !== 'rolled_back' && (
+                  <button onClick={onPause} className="px-3 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 dark:bg-amber-950 dark:hover:bg-amber-900 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs font-semibold transition-colors">
+                    ⏸ Pause Rollout
+                  </button>
+                )}
+                {stage < 100 && status !== 'rolled_back' && (
+                  <button onClick={onAdvance} className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition-colors shadow-sm">
+                    ▶ Advance Stage
+                  </button>
+                )}
+                <button onClick={onRequestRollback} className="px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 dark:bg-rose-950 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 text-xs font-semibold transition-colors">
+                  🔄 Level 4 Rollback
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {stages.map(s => {
+                const isCurrent = stage === s;
+                const isPast = stage > s;
+                return (
+                  <div key={s} className={`p-4 rounded-xl border transition-all ${isCurrent ? (s === 50 ? 'border-rose-500 bg-rose-50/70 dark:border-rose-500 dark:bg-rose-950/40 ring-2 ring-rose-500/40' : 'border-blue-500 bg-blue-50/70 dark:border-blue-500 dark:bg-blue-950/40 ring-2 ring-blue-500/40') : isPast ? 'border-emerald-200 bg-emerald-50/50 dark:border-emerald-800 dark:bg-emerald-950/20' : 'border-slate-200 bg-slate-50/60 dark:border-slate-800 dark:bg-slate-850/60 opacity-60'}`}>
+                    <div className="flex justify-between font-bold text-sm mb-1 text-slate-900 dark:text-slate-100">
+                      <span>{s}% Cohort</span>
+                      <span>{isCurrent ? (s === 50 ? '⚠️ Critical' : 'Healthy') : isPast ? 'Passed' : 'Pending'}</span>
+                    </div>
+                    <div className="text-xs font-mono space-y-1 text-slate-600 dark:text-slate-300 mt-2">
+                      <div>Active Users: {s === 2 ? '45k' : s === 10 ? '220k' : s === 50 ? '1.1M' : 'Full'}</div>
+                      <div className={s === 50 && isCurrent ? 'text-rose-600 dark:text-rose-400 font-bold' : ''}>HTTP 5xx: {s === 50 ? '7.8% (Spike)' : s === 10 ? '1.1%' : s === 2 ? '0.8%' : 'N/A'}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // --- INCIDENTS VIEW ---
+    function IncidentsView({ incidents, onSendAfp }) {
+      const [selInc, setSelInc] = useState(incidents[0].id);
+      const [aiResult, setAiResult] = useState(null);
+      const [isAnalyzing, setIsAnalyzing] = useState(false);
+      const inc = incidents.find(i => i.id === selInc) || incidents[0];
+
+      const runAiAnalysis = () => {
+        setIsAnalyzing(true);
+        setTimeout(() => {
+          setIsAnalyzing(false);
+          setAiResult({
+            topHypothesis: 'Stale build cache reused across cart serialization schema migration (AST mutant #7a9e4f2)',
+            confidence: 0.87,
+            scores: { stack: 0.94, ast: 0.91, history: 0.78, p95: 0.85 },
+            summary: 'IRA Agent analysis identifies an insidious stale-cache defect: commit #7a9e4f2 altered serialization schema but BIA reused build cache, emitting incompatible binaries that failed during cart deserialization at 50% rollout. Confidence 0.870 satisfies gating threshold (>= 0.750).'
+          });
+        }, 500);
+      };
+
+      return (
+        <div className="space-y-6">
+          <div className="pb-2 border-b border-slate-200 dark:border-slate-800">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Incident Intelligence Workspace</h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400">IRA subsystem: Root-cause analysis and ARIA Feedback Protocol (AFP) signal dispatch</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {incidents.map(i => (
+              <div
+                key={i.id}
+                onClick={() => { setSelInc(i.id); setAiResult(null); }}
+                className={`p-3.5 rounded-lg border cursor-pointer transition-all shadow-sm ${
+                  selInc === i.id
+                    ? 'border-blue-500 bg-blue-50/70 dark:border-blue-600 dark:bg-slate-850 ring-1 ring-blue-500/30'
+                    : 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700'
+                }`}
+              >
+                <div className="flex justify-between font-mono text-xs font-bold mb-1">
+                  <span className="text-blue-700 dark:text-blue-400">{i.id}</span>
+                  <span className="text-rose-600 dark:text-rose-400 uppercase">{i.severity}</span>
+                </div>
+                <div className="text-xs font-semibold text-slate-900 dark:text-slate-200 truncate mb-1">{i.title}</div>
+                <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400">c = {i.confidence} &bull; {i.implicatedModule}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 space-y-4 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">{inc.title}</h2>
+                <span className="text-xs font-mono text-slate-500 dark:text-slate-400">Release: {inc.release} &bull; Implicated: {inc.implicatedModule}</span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={runAiAnalysis}
+                  disabled={isAnalyzing}
+                  className="px-3.5 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 font-semibold text-xs transition-colors border border-slate-300 dark:border-slate-700 shadow-sm"
+                >
+                  {isAnalyzing ? 'Evaluating Hypotheses...' : '⚡ Run IRA AI Attribution'}
+                </button>
+
+                {inc.afpSent ? (
+                  <span className="px-3 py-2 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800 text-xs font-semibold">
+                    ✓ AFP Signal Dispatched
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => onSendAfp(inc.id)}
+                    className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs transition-colors shadow-sm"
+                  >
+                    ⚡ Send AFP-INCIDENT Signal
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {aiResult && (
+              <div className="p-4 rounded-xl bg-blue-50/70 dark:bg-slate-850 border border-blue-200 dark:border-blue-900 animate-in fade-in duration-300">
+                <div className="flex justify-between items-center pb-2 border-b border-blue-200 dark:border-slate-800 mb-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100">
+                    IRA Automated Semantic Hypothesis Attribution
+                  </span>
+                  <span className="font-mono text-xs px-2.5 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-bold">
+                    Confidence: {(aiResult.confidence * 100).toFixed(1)}% (ELIGIBLE)
+                  </span>
+                </div>
+                <p className="text-xs text-slate-700 dark:text-slate-300 mb-3">{aiResult.summary}</p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono text-[10px]">
+                  <div className="p-2 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                    <span className="text-slate-400 block">Stack Trace Match</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200">{(aiResult.scores.stack * 100).toFixed(0)}%</span>
+                  </div>
+                  <div className="p-2 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                    <span className="text-slate-400 block">AST Mutant Match</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200">{(aiResult.scores.ast * 100).toFixed(0)}%</span>
+                  </div>
+                  <div className="p-2 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                    <span className="text-slate-400 block">Failure History</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200">{(aiResult.scores.history * 100).toFixed(0)}%</span>
+                  </div>
+                  <div className="p-2 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                    <span className="text-slate-400 block">p95 Latency Align</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200">{(aiResult.scores.p95 * 100).toFixed(0)}%</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 text-xs font-mono">
+              <div><span className="text-slate-500 dark:text-slate-400 block text-[10px]">Confidence:</span> <span className={inc.confidence >= 0.75 ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-amber-600 dark:text-amber-400 font-bold'}>{inc.confidence} (Threshold: 0.75)</span></div>
+              <div><span className="text-slate-500 dark:text-slate-400 block text-[10px]">Gating Decision:</span> {inc.confidence >= 0.75 ? 'ELIGIBLE' : 'GATED / REJECTED'}</div>
+              <div><span className="text-slate-500 dark:text-slate-400 block text-[10px]">Scenario:</span> {inc.scenarioType}</div>
+              <div><span className="text-slate-500 dark:text-slate-400 block text-[10px]">Detected:</span> {inc.detectedAt.split(' ')[1]}</div>
+            </div>
+
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 mb-2">Root-Cause Hypotheses & Evidence</h3>
+              {inc.hypotheses.map((h, idx) => (
+                <div key={idx} className="p-3.5 rounded-lg bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 mb-2 text-xs">
+                  <div className="flex justify-between font-bold text-slate-900 dark:text-slate-100 mb-1">
+                    <span>{h.desc}</span>
+                    <span className="font-mono text-blue-700 dark:text-blue-400 font-bold">{(h.conf * 100).toFixed(0)}% Conf</span>
+                  </div>
+                  <ul className="list-disc list-inside text-slate-600 dark:text-slate-400 text-[11px] space-y-0.5">
+                    {h.evidence.map((ev, i) => <li key={i}>{ev}</li>)}
+                  </ul>
+                </div>
+              ))}
+            </div>
+
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 mb-2">Relevant Runtime Telemetry Logs</h3>
+              <div className="p-3 rounded-lg bg-slate-950 font-mono text-[10px] space-y-1 text-slate-300 border border-slate-800 overflow-x-auto">
+                {inc.logs.map((l, i) => (
+                  <div key={i} className={l.includes('FATAL') ? 'text-rose-400' : l.includes('WARN') ? 'text-amber-300' : ''}>{l}</div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // --- AFP PROTOCOL VIEW ---
+    function AfpView({ modules, onSendAfp, onDecay, subsequentTestCount, isAfpElevated }) {
+      const [calcW, setCalcW] = useState(0.3);
+      const [calcC, setCalcC] = useState(0.87);
+      const [calcDays, setCalcDays] = useState(7);
+
+      const accepted = calcC >= 0.75;
+      const updatedW = accepted ? Number(Math.min(1.0, calcW + calcC * 0.4).toFixed(3)) : calcW;
+      const decayedW = Number(Math.max(0.3, 0.3 + (updatedW - 0.3) * Math.exp(-0.1 * calcDays)).toFixed(3));
+
+      const cart = modules.find(m => m.id === 'mod-checkout-cart');
+
+      return (
+        <div className="space-y-6">
+          <div className="pb-2 border-b border-slate-200 dark:border-slate-800">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">ARIA Feedback Protocol (AFP) Engine</h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Core protocol: Closed-loop risk propagation, confidence gating, and exponential decay</p>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm">
+            <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-2">Interactive AFP Mathematical Calculator</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">Formula: newWeight = min(1.0, currentWeight + confidence &bull; 0.4) &bull; Threshold: c &ge; 0.75</p>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 text-xs">
+              <div>
+                <label className="text-slate-600 dark:text-slate-400 block mb-1 font-medium">Current Weight (w₀):</label>
+                <input type="number" step="0.05" value={calcW} onChange={e => setCalcW(parseFloat(e.target.value)||0.3)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2 font-mono text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500" />
+              </div>
+              <div>
+                <label className="text-slate-600 dark:text-slate-400 block mb-1 font-medium">Confidence (c &ge; 0.75):</label>
+                <input type="number" step="0.01" value={calcC} onChange={e => setCalcC(parseFloat(e.target.value)||0)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2 font-mono text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500" />
+              </div>
+              <div>
+                <label className="text-slate-600 dark:text-slate-400 block mb-1 font-medium">Decay Days (t):</label>
+                <input type="number" value={calcDays} onChange={e => setCalcDays(parseInt(e.target.value)||0)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2 font-mono text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 text-xs">
+              <div>
+                <span className="text-[10px] uppercase font-mono text-slate-500 dark:text-slate-400">Incident Weight Update</span>
+                <div className="text-lg font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-1">
+                  {accepted ? `${calcW} + (${calcC} × 0.4) = ${updatedW}` : 'GATED / REJECTED (c < 0.75)'}
+                </div>
+              </div>
+              <div>
+                <span className="text-[10px] uppercase font-mono text-slate-500 dark:text-slate-400">Decay After {calcDays} Days</span>
+                <div className="text-lg font-bold font-mono text-blue-700 dark:text-blue-300 mt-1">{decayedW} (toward 0.300)</div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-4 pt-3 border-t border-slate-200 dark:border-slate-800">
+              <button onClick={() => onSendAfp('INC-7402')} className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-sm transition-colors">
+                ⚡ Apply INC-7402 Update (0.3 &rarr; 0.648)
+              </button>
+              <button onClick={() => onDecay(7)} className="px-3.5 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-medium transition-colors">
+                Simulate 7 Days Decay
+              </button>
+            </div>
+          </div>
+
+          {/* Monte Carlo Decay Horizon & Escape Hazard Table */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 mb-1">
+              Monte Carlo Decay Horizon & Escape Hazard Forecast
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+              Deterministic decay w(t) = w_baseline + (w0 - w_baseline)e^(-λt) with regression hazard rates:
+            </p>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs font-mono">
+                <thead>
+                  <tr className="border-b border-slate-200 dark:border-slate-800 text-[10px] text-slate-400 uppercase">
+                    <th className="py-2 px-3">Horizon</th>
+                    <th className="py-2 px-3">Expected Risk w(t)</th>
+                    <th className="py-2 px-3">Active CI Tests</th>
+                    <th className="py-2 px-3">Escape Hazard</th>
+                    <th className="py-2 px-3">Cache Invalidation Policy</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {[
+                    { d: 'Day 0', w: updatedW, t: isAfpElevated ? 1334 : 847, h: isAfpElevated ? '0.08%' : '0.72%', p: isAfpElevated ? 'strict_invalidation' : 'standard' },
+                    { d: 'Day 7', w: (0.3 + (updatedW - 0.3) * Math.exp(-0.7)).toFixed(3), t: Math.round(847 + ((0.3 + (updatedW - 0.3) * Math.exp(-0.7) - 0.3)/(updatedW - 0.3 || 1)) * 487), h: '0.24%', p: 'strict_invalidation' },
+                    { d: 'Day 14', w: (0.3 + (updatedW - 0.3) * Math.exp(-1.4)).toFixed(3), t: Math.round(847 + ((0.3 + (updatedW - 0.3) * Math.exp(-1.4) - 0.3)/(updatedW - 0.3 || 1)) * 487), h: '0.42%', p: 'standard' },
+                    { d: 'Day 30', w: (0.3 + (updatedW - 0.3) * Math.exp(-3.0)).toFixed(3), t: 868, h: '0.68%', p: 'standard' },
+                    { d: 'Day 60', w: '0.300', t: 847, h: '0.72%', p: 'standard' }
+                  ].map((row, idx) => (
+                    <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-850/50">
+                      <td className="py-2.5 px-3 font-bold text-slate-900 dark:text-slate-100">{row.d}</td>
+                      <td className={`py-2.5 px-3 font-bold ${parseFloat(row.w) > 0.4 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>{row.w}</td>
+                      <td className="py-2.5 px-3">{row.t} tests</td>
+                      <td className="py-2.5 px-3"><span className="px-2 py-0.5 rounded text-[10px] bg-slate-100 dark:bg-slate-800">{row.h}</span></td>
+                      <td className="py-2.5 px-3"><span className="text-[10px] px-2 py-0.5 rounded bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 font-mono">{row.p}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 mb-4">Upstream Closed-Loop Impact</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+              <div className="p-4 rounded-lg bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800">
+                <span className="font-bold text-slate-800 dark:text-slate-200 block mb-2">Baseline Commit (Pre-Feedback)</span>
+                <div className="space-y-1 font-mono text-slate-500 dark:text-slate-400">
+                  <div>checkout-cart Risk: 0.300</div>
+                  <div>Cache Policy: standard</div>
+                  <div>CI Selected Tests: 847 tests</div>
+                  <div>Cart Regression Suite: Pruned</div>
+                </div>
+              </div>
+
+              <div className={`p-4 rounded-lg border ${isAfpElevated ? 'bg-blue-50/70 border-blue-500 dark:bg-slate-850 dark:border-blue-600 ring-1 ring-blue-500/30' : 'bg-slate-50/50 dark:bg-slate-850 border-slate-200 dark:border-slate-800 opacity-60'}`}>
+                <span className="font-bold text-blue-800 dark:text-blue-300 block mb-2">Subsequent Commit (Post-AFP Feedback)</span>
+                <div className="space-y-1 font-mono text-slate-700 dark:text-slate-300">
+                  <div>checkout-cart Risk: <strong className="text-rose-600 dark:text-rose-400">{cart ? cart.currentRisk.toFixed(3) : '0.648'}</strong></div>
+                  <div>Cache Policy: <strong className="text-blue-700 dark:text-blue-400">strict_invalidation</strong></div>
+                  <div>CI Selected Tests: <strong className="text-emerald-600 dark:text-emerald-400">{subsequentTestCount} tests (+487 tests)</strong></div>
+                  <div>Cart Regression Suite: <strong className="text-emerald-600 dark:text-emerald-400">Mandatory Active</strong></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // --- GOVERNANCE VIEW ---
+    function GovernanceView({ approvals, onResolve }) {
+      const pending = approvals.filter(a => a.status === 'pending');
+      const resolved = approvals.filter(a => a.status !== 'pending');
+
+      return (
+        <div className="space-y-6">
+          <div className="pb-2 border-b border-slate-200 dark:border-slate-800">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Governance & Autonomy Gatekeeping</h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Level 4 Human-in-the-loop authorization queue for high-impact actions</p>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300 mb-3">
+              Pending Level 4 Approval Queue ({pending.length})
+            </h2>
+
+            {pending.length === 0 ? (
+              <div className="text-xs text-slate-500 py-6 text-center">No pending approval requests.</div>
+            ) : (
+              <div className="space-y-3">
+                {pending.map(appr => (
+                  <div key={appr.id} className="p-4 rounded-xl border border-amber-200 bg-amber-50/50 dark:border-amber-900/60 dark:bg-amber-950/20 text-xs space-y-2">
+                    <div className="flex justify-between font-mono font-bold text-amber-700 dark:text-amber-300">
+                      <span>{appr.id} &bull; {appr.actionType}</span>
+                      <span>Requested by: {appr.requestedBy}</span>
+                    </div>
+                    <div className="font-bold text-slate-900 dark:text-slate-100">{appr.title}</div>
+                    <p className="text-slate-700 dark:text-slate-300">{appr.rationale}</p>
+                    <div className="flex gap-2 pt-2">
+                      <button onClick={() => onResolve(appr.id, 'approved')} className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-sm transition-colors">
+                        ✓ Authorize Execution
+                      </button>
+                      <button onClick={() => onResolve(appr.id, 'rejected')} className="px-3.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 dark:bg-rose-950 dark:hover:bg-rose-900 dark:text-rose-300 dark:border-rose-800 text-xs font-semibold transition-colors">
+                        ✕ Reject
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 mb-3">Resolved Approvals History</h2>
+            {resolved.length === 0 ? (
+              <div className="text-xs text-slate-500 py-4 text-center">No resolved approvals yet.</div>
+            ) : (
+              <div className="space-y-2 text-xs">
+                {resolved.map(a => (
+                  <div key={a.id} className="p-3 rounded-lg bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 flex justify-between">
+                    <div>
+                      <span className="font-mono font-bold text-slate-900 dark:text-slate-100">{a.id} ({a.actionType})</span>
+                      <span className={`ml-2 px-2 py-0.5 rounded text-[10px] font-bold ${a.status === 'approved' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-400' : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-400'}`}>{a.status}</span>
+                      <div className="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5">{a.title}</div>
+                    </div>
+                    <div className="text-right font-mono text-[11px] text-slate-500 dark:text-slate-400">
+                      <div className="text-blue-700 dark:text-blue-400">{a.resolvedBy}</div>
+                      <div>{a.resolvedAt}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // --- AUDIT VIEW ---
+    function AuditView({ auditEvents }) {
+      const [isVerifying, setIsVerifying] = useState(false);
+      const [chainValid, setChainValid] = useState(null);
+
+      const verifyChain = () => {
+        setIsVerifying(true);
+        setTimeout(() => {
+          setIsVerifying(false);
+          setChainValid(true);
+        }, 350);
+      };
+
+      return (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-200 dark:border-slate-800">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Immutable Audit Trail</h1>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Chronological, cryptographically verifiable log of all agent decisions and state changes</p>
+            </div>
+
+            <button
+              onClick={verifyChain}
+              disabled={isVerifying}
+              className="px-3.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800 text-xs font-semibold shadow-sm transition-colors"
+            >
+              {isVerifying ? 'Verifying Chain...' : '🛡️ Verify Cryptographic Chain'}
+            </button>
+          </div>
+
+          {chainValid && (
+            <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-900 dark:text-emerald-200 flex justify-between items-center shadow-sm">
+              <span><strong>Cryptographic Merkle Hash Chain Verified:</strong> All {auditEvents.length} events maintain valid parent-child SHA-256 hash integrity.</span>
+              <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-emerald-200 dark:bg-emerald-900 font-bold uppercase">LEDGER VALID</span>
+            </div>
+          )}
+
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm">
+            <div className="space-y-2.5 text-xs font-mono">
+              {auditEvents.map((e, idx) => (
+                <div key={e.id} className="p-3 rounded-lg bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 flex justify-between items-start">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-blue-700 dark:text-blue-400 font-bold">{e.cat}</span>
+                      <span className="text-slate-900 dark:text-slate-100 font-semibold">{e.action}</span>
+                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-200 dark:bg-slate-950 text-slate-600 dark:text-slate-400">{e.agent}</span>
+                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-500">SHA-256 #{idx}</span>
+                    </div>
+                    <div className="text-slate-600 dark:text-slate-400 text-[11px] font-sans">{e.details}</div>
+                  </div>
+                  <div className="text-slate-400 dark:text-slate-500 text-[10px] flex-shrink-0 ml-4">{e.time}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // --- GUIDED DEMO MODAL ---
+    function DemoModal({ step, onSetStep, onClose, onSendAfp, onReset, isAfpElevated, subsequentTestCount, modules }) {
+      const steps = [
+        { num: 1, title: 'Commit Trigger & Multi-Module Impact', agent: 'Developer Commit #7a9e4f2', desc: 'Commit touched 3 modules: checkout-cart, payment-gateway, analytics-sdk. ARIA evaluates dependency graph.' },
+        { num: 2, title: 'Build Intelligence: Cache Reuse', agent: 'BIA Agent', desc: 'BIA evaluates cache and recommends reusing cached checkout-cart artifact (85.7% cache hit rate), saving 6.4 minutes.' },
+        { num: 3, title: 'CI Orchestration: Targeted Test Selection', agent: 'COA Agent', desc: 'COA selects 847 tests from 12,340 suite using baseline risk weight (0.30), pruning untouched regression suites.' },
+        { num: 4, title: 'Staged Rollout Progression', agent: 'DCA Agent', desc: 'Release v3.2.1 advances through 2% and 10% rollout stages safely with 220,000 active users.' },
+        { num: 5, title: 'Runtime Anomaly Detected', agent: 'DCA / Telemetry', desc: 'At 50% rollout (1.1M users), checkout HTTP failure rate spikes from 3.2% to 7.8% due to cached schema incompatibility.' },
+        { num: 6, title: 'Root-Cause Attribution & Gating Check', agent: 'IRA Agent', desc: 'IRA correlates logs to checkout-cart with confidence 0.87. Confidence 0.87 satisfies the strict AFP threshold (>= 0.75).' },
+        { num: 7, title: 'ARIA Feedback Protocol (AFP) Weight Update', agent: 'AFP Protocol Engine', desc: 'AFP updates checkout-cart risk: min(1.0, 0.3 + 0.87 * 0.4) = 0.648. BIA switches cache policy to strict_invalidation.' },
+        { num: 8, title: 'Upstream Influence: CI Suite Automatically Expanded', agent: 'COA & Closed Feedback Loop', desc: 'Subsequent commit automatically selects 1,334 tests (+487 cart regression tests), preventing repeated regressions.' },
+      ];
+
+      const cur = steps[step - 1];
+
+      const next = () => {
+        if (step === 6) {
+          onSendAfp('INC-7402');
+        }
+        if (step < 8) {
+          onSetStep(step + 1);
+        } else {
+          onClose();
+        }
+      };
+
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 max-w-xl w-full shadow-xl space-y-4">
+            <div className="flex justify-between items-center pb-3 border-b border-slate-200 dark:border-slate-800">
+              <div>
+                <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base">ARIA Guided Demo Walkthrough</h3>
+                <span className="text-xs text-blue-700 dark:text-blue-400 font-mono font-medium">Step {step} of 8</span>
+              </div>
+              <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">✕</button>
+            </div>
+
+            <div className="p-4 rounded-lg bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 space-y-2">
+              <span className="text-[10px] px-2 py-0.5 rounded bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 border border-blue-200 dark:border-blue-800 font-mono font-medium">{cur.agent}</span>
+              <h4 className="font-bold text-slate-900 dark:text-slate-100 text-sm">{cur.title}</h4>
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">{cur.desc}</p>
+            </div>
+
+            <div className="flex justify-between items-center pt-3 border-t border-slate-200 dark:border-slate-800">
+              <button onClick={onReset} className="text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-medium">🔄 Reset</button>
+              <div className="flex gap-2">
+                {step > 1 && <button onClick={() => onSetStep(step - 1)} className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium">Back</button>}
+                <button onClick={next} className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-sm transition-colors">
+                  {step === 8 ? 'Finish Demo' : 'Execute & Next →'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
