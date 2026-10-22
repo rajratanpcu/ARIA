@@ -9,10 +9,15 @@ import {
   Activity,
   Play,
   Square,
+  Cpu,
+  Layers,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { useAria } from '../../context/AriaContext';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { telemetryStreamer, TelemetryDataPoint } from '../../services/telemetryStreamer';
+import { aiHypothesisEngine, IncidentAnalysisResult } from '../../services/aiHypothesisEngine';
 
 export const IncidentIntelligencePage: React.FC = () => {
   const {
@@ -26,6 +31,9 @@ export const IncidentIntelligencePage: React.FC = () => {
   const [liveStreamEnabled, setLiveStreamEnabled] = useState<boolean>(true);
   const [liveLogs, setLiveLogs] = useState<string[]>([]);
   const [currentMetrics, setCurrentMetrics] = useState<TelemetryDataPoint | null>(null);
+  const [aiAnalysisResult, setAiAnalysisResult] = useState<IncidentAnalysisResult | null>(null);
+  const [isEvaluating, setIsEvaluating] = useState<boolean>(false);
+  const [expandedHypothesisId, setExpandedHypothesisId] = useState<string | null>('hyp-ai-01');
 
   const selectedIncident =
     incidents.find((i) => i.id === selectedIncidentId) || incidents[0];
@@ -52,6 +60,19 @@ export const IncidentIntelligencePage: React.FC = () => {
     const res = sendAfpIncidentSignal(selectedIncident.id);
     setFeedbackNotice(res.message);
     setTimeout(() => setFeedbackNotice(null), 8000);
+  };
+
+  const handleRunAiEvaluation = () => {
+    setIsEvaluating(true);
+    setTimeout(() => {
+      const activeLogs = liveLogs.length > 0 ? liveLogs : selectedIncident.relevantLogs;
+      const res = aiHypothesisEngine.evaluateIncident(selectedIncident.id, activeLogs);
+      setAiAnalysisResult(res);
+      setIsEvaluating(false);
+      if (res.hypotheses.length > 0) {
+        setExpandedHypothesisId(res.hypotheses[0].id);
+      }
+    }, 600);
   };
 
   return (
@@ -136,8 +157,17 @@ export const IncidentIntelligencePage: React.FC = () => {
                 </h2>
               </div>
 
-              {/* AFP Dispatch Button */}
-              <div>
+              {/* Action Buttons: Run AI Analysis & AFP Dispatch */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleRunAiEvaluation}
+                  disabled={isEvaluating}
+                  className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 font-semibold text-xs transition-colors border border-slate-300 dark:border-slate-700 shadow-sm"
+                >
+                  <Cpu className={`w-3.5 h-3.5 text-blue-600 dark:text-blue-400 ${isEvaluating ? 'animate-spin' : ''}`} />
+                  <span>{isEvaluating ? 'Evaluating Hypotheses...' : 'Run IRA AI Attribution'}</span>
+                </button>
+
                 {selectedIncident.afpSignalSent ? (
                   <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/80 dark:text-emerald-300 dark:border-emerald-800 text-xs font-semibold">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
@@ -182,6 +212,124 @@ export const IncidentIntelligencePage: React.FC = () => {
                 <span className="text-slate-700 dark:text-slate-300 text-[11px]">{selectedIncident.detectedAt}</span>
               </div>
             </div>
+
+            {/* AI Evaluated Hypotheses Deep-Dive (if run) */}
+            {aiAnalysisResult && (
+              <div className="mb-6 p-4 rounded-xl bg-blue-50/60 dark:bg-slate-850 border border-blue-200 dark:border-blue-900 shadow-sm animate-in fade-in duration-300">
+                <div className="flex items-center justify-between pb-3 border-b border-blue-200 dark:border-slate-800 mb-3">
+                  <div className="flex items-center gap-2">
+                    <Cpu className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100">
+                      IRA Automated Root-Cause Attribution Summary
+                    </h3>
+                  </div>
+                  <span className="font-mono text-xs px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-semibold border border-emerald-300 dark:border-emerald-800">
+                    Confidence: {(aiAnalysisResult.primaryConfidence * 100).toFixed(1)}% ({aiAnalysisResult.gatingDecision})
+                  </span>
+                </div>
+
+                <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed mb-4">
+                  {aiAnalysisResult.aiSummary}
+                </p>
+
+                <div className="space-y-3">
+                  {aiAnalysisResult.hypotheses.map((h) => {
+                    const isExpanded = expandedHypothesisId === h.id;
+                    return (
+                      <div
+                        key={h.id}
+                        className={`p-3.5 rounded-lg border text-xs transition-all ${
+                          h.isPrimary
+                            ? 'border-blue-500 bg-white dark:border-blue-600 dark:bg-slate-900 shadow-sm'
+                            : 'border-slate-200 bg-white/70 dark:border-slate-800 dark:bg-slate-900/60'
+                        }`}
+                      >
+                        <div
+                          className="flex items-center justify-between cursor-pointer select-none"
+                          onClick={() => setExpandedHypothesisId(isExpanded ? null : h.id)}
+                        >
+                          <div className="flex items-center gap-2">
+                            {h.isPrimary && (
+                              <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 font-mono text-[10px] font-bold uppercase">
+                                Top Ranked
+                              </span>
+                            )}
+                            <span className="font-bold text-slate-900 dark:text-slate-100">{h.description}</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="font-mono font-bold text-blue-700 dark:text-blue-400">
+                              c = {h.confidence.toFixed(2)}
+                            </span>
+                            {isExpanded ? (
+                              <ChevronUp className="w-4 h-4 text-slate-400" />
+                            ) : (
+                              <ChevronDown className="w-4 h-4 text-slate-400" />
+                            )}
+                          </div>
+                        </div>
+
+                        {isExpanded && (
+                          <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 space-y-3">
+                            {/* Score Breakdown Radar/Bars */}
+                            <div>
+                              <span className="text-[10px] font-mono uppercase text-slate-400 block mb-1.5">
+                                Semantic Evidence Sub-Scores
+                              </span>
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono text-[10px]">
+                                <div className="p-2 rounded bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                                  <span className="text-slate-400 block">Stack Relevance</span>
+                                  <span className="font-bold text-slate-800 dark:text-slate-200">
+                                    {(h.scoreBreakdown.stackTraceRelevance * 100).toFixed(0)}%
+                                  </span>
+                                </div>
+                                <div className="p-2 rounded bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                                  <span className="text-slate-400 block">AST Mutant Match</span>
+                                  <span className="font-bold text-slate-800 dark:text-slate-200">
+                                    {(h.scoreBreakdown.astDiffCorrelation * 100).toFixed(0)}%
+                                  </span>
+                                </div>
+                                <div className="p-2 rounded bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                                  <span className="text-slate-400 block">Historical Failure</span>
+                                  <span className="font-bold text-slate-800 dark:text-slate-200">
+                                    {(h.scoreBreakdown.historicalFailureMatch * 100).toFixed(0)}%
+                                  </span>
+                                </div>
+                                <div className="p-2 rounded bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                                  <span className="text-slate-400 block">p95 Alignment</span>
+                                  <span className="font-bold text-slate-800 dark:text-slate-200">
+                                    {(h.scoreBreakdown.networkP95Alignment * 100).toFixed(0)}%
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Evidence Chain */}
+                            <div>
+                              <span className="text-[10px] font-mono uppercase text-slate-400 block mb-1">
+                                Correlated Evidence Chain
+                              </span>
+                              <ul className="list-disc list-inside space-y-1 text-slate-600 dark:text-slate-400 text-[11px]">
+                                {h.evidenceChain.map((ev, i) => (
+                                  <li key={i}>{ev}</li>
+                                ))}
+                              </ul>
+                            </div>
+
+                            {/* Recommended Action */}
+                            <div className="p-2.5 rounded bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 text-blue-900 dark:text-blue-200 text-xs">
+                              <span className="font-bold block text-[10px] uppercase font-mono mb-0.5">
+                                Automated Policy Action:
+                              </span>
+                              {h.remediationAction}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Root Cause Hypotheses */}
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 mb-3 flex items-center gap-2">

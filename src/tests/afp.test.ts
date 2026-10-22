@@ -9,6 +9,7 @@ import {
   calculateTestPriority,
   requiresHumanApproval,
 } from '../core/afpEngine.ts';
+import { aiHypothesisEngine } from '../services/aiHypothesisEngine.ts';
 import type { TestCase } from '../types/index.ts';
 
 test('AFP Gating: Rejects confidence below threshold (0.75)', () => {
@@ -98,3 +99,20 @@ test('Governance: Level 4 actions strictly require human authorization', () => {
   assert.strictEqual(requiresHumanApproval('RELEASE_HOLD'), true);
   assert.strictEqual(requiresHumanApproval('POLICY_CHANGE'), true);
 });
+
+test('AI Hypothesis Engine: Evaluates INC-7402 log traces with confidence >= 0.75', () => {
+  const sampleLogs = [
+    '[FATAL] [checkout-cart] DeserializationError: missing field couponMetadata in CartItemState',
+    '[ERROR] [checkout-cart] CartPersistenceWorker: corrupted parcel schema detected'
+  ];
+
+  const analysis = aiHypothesisEngine.evaluateIncident('INC-7402', sampleLogs);
+  assert.strictEqual(analysis.incidentId, 'INC-7402');
+  assert.strictEqual(analysis.implicatedModule, 'checkout-cart');
+  assert.strictEqual(analysis.gatingDecision, 'ELIGIBLE');
+  assert.ok(analysis.primaryConfidence >= 0.75);
+  assert.strictEqual(analysis.hypotheses.length, 2);
+  assert.strictEqual(analysis.hypotheses[0].isPrimary, true);
+  assert.ok(analysis.hypotheses[0].confidence >= 0.85);
+});
+
