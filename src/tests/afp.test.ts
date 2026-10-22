@@ -10,6 +10,7 @@ import {
   requiresHumanApproval,
 } from '../core/afpEngine.ts';
 import { aiHypothesisEngine } from '../services/aiHypothesisEngine.ts';
+import { afpSimulationEngine } from '../services/afpSimulationEngine.ts';
 import type { TestCase } from '../types/index.ts';
 
 test('AFP Gating: Rejects confidence below threshold (0.75)', () => {
@@ -115,4 +116,31 @@ test('AI Hypothesis Engine: Evaluates INC-7402 log traces with confidence >= 0.7
   assert.strictEqual(analysis.hypotheses[0].isPrimary, true);
   assert.ok(analysis.hypotheses[0].confidence >= 0.85);
 });
+
+test('AFP Simulation Engine: Generates accurate decay curve and Monte Carlo bounds', () => {
+  const points = afpSimulationEngine.generateDecayForecast({
+    initialWeight: 0.648,
+    baselineWeight: 0.3,
+    decayLambda: 0.1,
+    alpha: 0.4,
+    confidenceThreshold: 0.75,
+    numIterations: 200,
+    forecastHorizonDays: 14,
+  });
+
+  assert.strictEqual(points.length, 15); // Days 0..14
+  assert.strictEqual(points[0].day, 0);
+  assert.strictEqual(points[0].expectedRisk, 0.648);
+  assert.strictEqual(points[0].testSuiteSize, 1334); // Expanded suite at Day 0
+
+  // Day 14 should have decayed toward baseline
+  const day14 = points[14];
+  assert.ok(day14.expectedRisk < 0.648);
+  assert.ok(day14.expectedRisk > 0.3);
+  assert.ok(day14.testSuiteSize < 1334);
+  assert.ok(day14.testSuiteSize >= 847);
+  assert.ok(day14.lowerConfidence95 <= day14.expectedRisk);
+  assert.ok(day14.upperConfidence95 >= day14.expectedRisk);
+});
+
 

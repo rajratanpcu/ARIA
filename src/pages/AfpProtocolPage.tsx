@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   RotateCcw,
   Zap,
   Calculator,
   Layers,
   Clock,
+  TrendingDown,
+  Sliders,
+  ShieldAlert,
 } from 'lucide-react';
 import { useAria } from '../../context/AriaContext';
 import { StatusBadge } from '../../components/common/StatusBadge';
@@ -13,6 +16,7 @@ import {
   calculateDecayedWeight,
   DEFAULT_AFP_PARAMS,
 } from '../../core/afpEngine';
+import { afpSimulationEngine, HazardPoint } from '../../services/afpSimulationEngine';
 
 export const AfpProtocolPage: React.FC = () => {
   const {
@@ -28,6 +32,8 @@ export const AfpProtocolPage: React.FC = () => {
   const [calcConfidence, setCalcConfidence] = useState<number>(0.87);
   const [calcAlpha, setCalcAlpha] = useState<number>(0.4);
   const [calcDecayDays, setCalcDecayDays] = useState<number>(7);
+  const [simLambda, setSimLambda] = useState<number>(0.1);
+  const [simHorizon, setSimHorizon] = useState<number>(30);
 
   const calcResult = calculateIncidentWeightUpdate(calcCurrentWeight, calcConfidence, {
     ...DEFAULT_AFP_PARAMS,
@@ -35,6 +41,18 @@ export const AfpProtocolPage: React.FC = () => {
   });
 
   const calcDecayed = calculateDecayedWeight(calcResult.newWeight, calcDecayDays);
+
+  const forecastPoints: HazardPoint[] = useMemo(() => {
+    return afpSimulationEngine.generateDecayForecast({
+      initialWeight: calcResult.newWeight,
+      baselineWeight: 0.3,
+      decayLambda: simLambda,
+      alpha: calcAlpha,
+      confidenceThreshold: 0.75,
+      numIterations: 300,
+      forecastHorizonDays: simHorizon,
+    });
+  }, [calcResult.newWeight, simLambda, calcAlpha, simHorizon]);
 
   const cartModule = modules.find((m) => m.id === 'mod-checkout-cart');
   const isAfpActive = cartModule ? cartModule.currentRiskWeight > 0.3 : false;
@@ -256,6 +274,101 @@ export const AfpProtocolPage: React.FC = () => {
             <RotateCcw className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
             <span>Simulate 30 Days of Decay</span>
           </button>
+        </div>
+      </div>
+
+      {/* Real-Time Mathematical Decay & Hazard Forecast Curve */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-slate-200 dark:border-slate-800">
+          <div>
+            <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <TrendingDown className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              Monte Carlo Decay Horizon & Escape Hazard Forecast
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Projects risk decay trajectories, CI test suite footprint, and regression escape probability over time.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400">&lambda;:</span>
+              <input
+                type="range"
+                min="0.02"
+                max="0.25"
+                step="0.01"
+                value={simLambda}
+                onChange={(e) => setSimLambda(parseFloat(e.target.value))}
+                className="w-24 accent-blue-600"
+              />
+              <span className="font-mono text-xs font-bold text-blue-700 dark:text-blue-400">{simLambda.toFixed(2)}/d</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Visual Forecast Table / Stepped Curve */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs font-mono">
+            <thead>
+              <tr className="border-b border-slate-200 dark:border-slate-800 text-[10px] text-slate-400 uppercase tracking-wider">
+                <th className="py-2 px-3">Horizon</th>
+                <th className="py-2 px-3">Expected Risk w(t)</th>
+                <th className="py-2 px-3">95% Monte Carlo Band</th>
+                <th className="py-2 px-3">Active CI Tests</th>
+                <th className="py-2 px-3">Escape Hazard</th>
+                <th className="py-2 px-3">Cache Invalidation Policy</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              {forecastPoints
+                .filter((p) => [0, 1, 3, 7, 14, 21, 30].includes(p.day))
+                .map((p) => {
+                  const isElevated = p.expectedRisk > 0.4;
+                  return (
+                    <tr key={p.day} className="hover:bg-slate-50/50 dark:hover:bg-slate-850/50">
+                      <td className="py-2.5 px-3 font-bold text-slate-900 dark:text-slate-100">
+                        {p.day === 0 ? 'Day 0 (Immediate)' : `Day ${p.day}`}
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <span
+                          className={`font-bold ${
+                            isElevated
+                              ? 'text-rose-600 dark:text-rose-400'
+                              : 'text-emerald-600 dark:text-emerald-400'
+                          }`}
+                        >
+                          {p.expectedRisk.toFixed(3)}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3 text-slate-500 dark:text-slate-400">
+                        [{p.lowerConfidence95.toFixed(3)} - {p.upperConfidence95.toFixed(3)}]
+                      </td>
+                      <td className="py-2.5 px-3 font-semibold text-slate-800 dark:text-slate-200">
+                        {p.testSuiteSize} tests
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <span
+                          className={`px-2 py-0.5 rounded text-[10px] ${
+                            p.hazardRate < 0.25
+                              ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
+                              : 'bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300'
+                          }`}
+                        >
+                          {p.hazardRate}%
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <StatusBadge
+                          status={p.expectedRisk > 0.35 ? 'strict_invalidation' : 'standard'}
+                          size="sm"
+                        />
+                      </td>
+                    </tr>
+                  );
+                })}
+            </tbody>
+          </table>
         </div>
       </div>
 
