@@ -7,7 +7,7 @@
 [![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.2.5-brightgreen.svg)](https://spring.io/projects/spring-boot)
 [![Java](https://img.shields.io/badge/Java-21-orange.svg)](https://openjdk.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue.svg)](https://www.postgresql.org/)
-[![Node.js Tests](https://img.shields.io/badge/Tests-11%2F11%20Passing-brightgreen.svg)]()
+[![Node.js Tests](https://img.shields.io/badge/Tests-12%2F12%20Passing-brightgreen.svg)]()
 [![Autonomy Level](https://img.shields.io/badge/Autonomy-Level%204%20(Cryptographic%20Gate)-amber.svg)]()
 [![SHA-256 Hash Chain](https://img.shields.io/badge/Audit-SHA--256%20Merkle%20Ledger-blue.svg)]()
 
@@ -183,6 +183,7 @@ tsx --test src/tests/afp.test.ts
 * `[PASS]` **CI Test Runner Simulator**: Simulates emulator matrices, flakiness categorization, and regression detection in `checkout-cart`.
 * `[PASS]` **Cryptographic Merkle Hash Chaining**: Validates SHA-256 parent-child links and detects intentional ledger tampering.
 * `[PASS]` **Level 4 Dual-Key Sign-Off**: Verifies primary human and secondary autonomous agent co-signatures with cryptographic fingerprints.
+* `[PASS]` **Canary Rollout Engine**: Evaluates healthy and anomalous cohort thresholds, enforcing SLA bounds and Level 4 rollback gates.
 
 ---
 
