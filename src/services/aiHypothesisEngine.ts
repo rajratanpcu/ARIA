@@ -63,10 +63,10 @@ export class AiHypothesisEngine {
       const h2: EvaluatedHypothesis = {
         id: 'hyp-ai-02',
         description: 'Payment Gateway upstream webhook rate limiting during flash-sale surge',
-        confidence: 0.22,
+        confidence: hasUpstream429 ? 0.45 : 0.22,
         isPrimary: false,
         scoreBreakdown: {
-          stackTraceRelevance: 0.15,
+          stackTraceRelevance: hasUpstream429 ? 0.50 : 0.15,
           astDiffCorrelation: 0.20,
           historicalFailureMatch: 0.35,
           networkP95Alignment: 0.18,

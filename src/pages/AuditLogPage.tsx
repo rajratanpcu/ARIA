@@ -5,12 +5,12 @@ import {
   ShieldCheck,
   Lock,
   CheckCircle2,
-  AlertTriangle,
 } from 'lucide-react';
-import { useAria } from '../../context/AriaContext';
-import { AutonomyBadge } from '../../components/common/AutonomyBadge';
-import { StatusBadge } from '../../components/common/StatusBadge';
-import { cryptographicAuditEngine, CryptographicBlock } from '../../services/cryptographicAuditEngine';
+import { useAria } from '../context/AriaContext';
+import { AutonomyBadge } from '../components/common/AutonomyBadge';
+import { StatusBadge } from '../components/common/StatusBadge';
+import { cryptographicAuditEngine, CryptographicBlock } from '../services/cryptographicAuditEngine';
+import type { AuditEvent } from '../types';
 
 export const AuditLogPage: React.FC = () => {
   const { auditEvents } = useAria();
@@ -36,7 +36,7 @@ export const AuditLogPage: React.FC = () => {
     }, 400);
   };
 
-  const filteredEvents = auditEvents.filter((ev) => {
+  const filteredEvents = auditEvents.filter((ev: AuditEvent) => {
     if (categoryFilter !== 'all' && ev.category !== categoryFilter) return false;
     if (severityFilter !== 'all' && ev.severity !== severityFilter) return false;
     if (searchTerm) {
@@ -169,7 +169,7 @@ export const AuditLogPage: React.FC = () => {
           </div>
         ) : (
           <div className="space-y-3">
-            {filteredEvents.map((ev) => (
+            {filteredEvents.map((ev: AuditEvent) => (
               <div
                 key={ev.id}
                 className="p-3.5 rounded-lg bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800/90 text-xs hover:border-slate-300 dark:hover:border-slate-700 transition-colors"

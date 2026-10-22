@@ -8,7 +8,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "test": "node --experimental-strip-types --test src/tests/afp.test.ts"
+    "test": "tsx --test src/tests/afp.test.ts"
   },
   "dependencies": {
     "clsx": "^2.1.1",

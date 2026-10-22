@@ -6,18 +6,17 @@ import {
   FileText,
   Sparkles,
   Zap,
-  Activity,
   Play,
   Square,
   Cpu,
-  Layers,
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
-import { useAria } from '../../context/AriaContext';
-import { StatusBadge } from '../../components/common/StatusBadge';
-import { telemetryStreamer, TelemetryDataPoint } from '../../services/telemetryStreamer';
-import { aiHypothesisEngine, IncidentAnalysisResult } from '../../services/aiHypothesisEngine';
+import { useAria } from '../context/AriaContext';
+import { StatusBadge } from '../components/common/StatusBadge';
+import { telemetryStreamer, TelemetryDataPoint } from '../services/telemetryStreamer';
+import { aiHypothesisEngine, IncidentAnalysisResult } from '../services/aiHypothesisEngine';
+import type { Incident } from '../types';
 
 export const IncidentIntelligencePage: React.FC = () => {
   const {
@@ -36,7 +35,7 @@ export const IncidentIntelligencePage: React.FC = () => {
   const [expandedHypothesisId, setExpandedHypothesisId] = useState<string | null>('hyp-ai-01');
 
   const selectedIncident =
-    incidents.find((i) => i.id === selectedIncidentId) || incidents[0];
+    incidents.find((i: Incident) => i.id === selectedIncidentId) || incidents[0];
 
   useEffect(() => {
     if (liveStreamEnabled) {
@@ -109,7 +108,7 @@ export const IncidentIntelligencePage: React.FC = () => {
         </h3>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {incidents.map((inc) => {
+          {incidents.map((inc: Incident) => {
             const isSelected = inc.id === selectedIncidentId;
             return (
               <div

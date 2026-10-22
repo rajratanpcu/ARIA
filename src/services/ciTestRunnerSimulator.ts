@@ -29,7 +29,8 @@ export class CiTestRunnerSimulator {
    */
   public executeSelectedTests(
     tests: Array<{ id: string; name: string; moduleName: string; selected: boolean; executionCostMs: number; historicalFailureRate: number }>,
-    isAfpElevated: boolean
+    isAfpElevated: boolean,
+    simulateFlakes: boolean = false
   ): CiRunSummary {
     const selectedTests = tests.filter((t) => t.selected);
     const results: TestExecutionResult[] = [];
@@ -52,7 +53,7 @@ export class CiTestRunnerSimulator {
         // Under regression suite, it catches the deserialization bug!
         status = 'failed';
         failureMessage = 'AssertionError: Expected CartItemState schema v14, found cached v13 parcel.';
-      } else if (isFlaky && Math.random() < 0.08) {
+      } else if (isFlaky && simulateFlakes && Math.random() < 0.08) {
         // Quarantined due to transient network flake
         status = 'quarantined';
         failureMessage = 'TransientFlakeWarning: SocketTimeoutException on local emulator port 5554.';

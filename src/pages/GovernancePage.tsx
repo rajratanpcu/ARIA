@@ -5,13 +5,12 @@ import {
   XCircle,
   Clock,
   KeyRound,
-  Lock,
 } from 'lucide-react';
-import { useAria } from '../../context/AriaContext';
-import { AutonomyBadge } from '../../components/common/AutonomyBadge';
-import { StatusBadge } from '../../components/common/StatusBadge';
-import { AUTONOMY_LEVELS, AutonomyLevel } from '../../types';
-import { cryptographicAuditEngine, DualKeyAuthorization } from '../../services/cryptographicAuditEngine';
+import { useAria } from '../context/AriaContext';
+import { AutonomyBadge } from '../components/common/AutonomyBadge';
+import { StatusBadge } from '../components/common/StatusBadge';
+import { AUTONOMY_LEVELS, AutonomyLevel } from '../types';
+import { cryptographicAuditEngine, DualKeyAuthorization } from '../services/cryptographicAuditEngine';
 
 export const GovernancePage: React.FC = () => {
   const { approvals, resolveApproval } = useAria();

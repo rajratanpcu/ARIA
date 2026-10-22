@@ -8,10 +8,10 @@ import {
   History,
   Info,
 } from 'lucide-react';
-import { useAria } from '../../context/AriaContext';
-import { AgentRole } from '../../types';
-import { StatusBadge } from '../../components/common/StatusBadge';
-import { AutonomyBadge } from '../../components/common/AutonomyBadge';
+import { useAria } from '../context/AriaContext';
+import { Agent, AgentRole } from '../types';
+import { StatusBadge } from '../components/common/StatusBadge';
+import { AutonomyBadge } from '../components/common/AutonomyBadge';
 
 export const AgentsPage: React.FC = () => {
   const { agents, subsequentCommitTestCount } = useAria();
@@ -25,7 +25,7 @@ export const AgentsPage: React.FC = () => {
     IRA: AlertTriangle,
   };
 
-  const activeAgentData = agents.find((a) => a.id === selectedAgent) || agents[0];
+  const activeAgentData = agents.find((a: Agent) => a.id === selectedAgent) || agents[0];
 
   return (
     <div className="space-y-6">
@@ -52,7 +52,7 @@ export const AgentsPage: React.FC = () => {
 
       {/* 5 Distinct Agent Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        {agents.map((agent) => {
+        {agents.map((agent: Agent) => {
           const Icon = agentIcons[agent.id];
           const isSelected = agent.id === selectedAgent;
 
@@ -231,7 +231,7 @@ export const AgentsPage: React.FC = () => {
           </h3>
 
           <div className="space-y-2.5">
-            {activeAgentData.activityHistory.map((item, idx) => (
+            {activeAgentData.activityHistory.map((item, idx: number) => (
               <div
                 key={idx}
                 className="p-3 rounded-lg bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"

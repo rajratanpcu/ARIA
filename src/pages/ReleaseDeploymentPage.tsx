@@ -7,14 +7,11 @@ import {
   Pause,
   RotateCcw,
   Info,
-  ShieldAlert,
-  Sliders,
-  Activity,
 } from 'lucide-react';
-import { useAria } from '../../context/AriaContext';
-import { StatusBadge } from '../../components/common/StatusBadge';
-import { Modal } from '../../components/common/Modal';
-import { canaryRolloutEngine, CanaryCohortState, DEFAULT_CANARY_POLICY } from '../../services/canaryRolloutEngine';
+import { useAria } from '../context/AriaContext';
+import { StatusBadge } from '../components/common/StatusBadge';
+import { Modal } from '../components/common/Modal';
+import { canaryRolloutEngine, DEFAULT_CANARY_POLICY } from '../services/canaryRolloutEngine';
 
 export const ReleaseDeploymentPage: React.FC = () => {
   const {

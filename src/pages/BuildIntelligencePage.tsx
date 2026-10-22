@@ -5,9 +5,10 @@ import {
   Clock,
   Sparkles,
 } from 'lucide-react';
-import { useAria } from '../../context/AriaContext';
-import { StatusBadge } from '../../components/common/StatusBadge';
-import { RiskMeter } from '../../components/common/RiskMeter';
+import { useAria } from '../context/AriaContext';
+import { StatusBadge } from '../components/common/StatusBadge';
+import { RiskMeter } from '../components/common/RiskMeter';
+import type { Commit, Build, Module } from '../types';
 
 export const BuildIntelligencePage: React.FC = () => {
   const {
@@ -19,12 +20,12 @@ export const BuildIntelligencePage: React.FC = () => {
   } = useAria();
 
   const selectedCommit =
-    commits.find((c) => c.id === selectedCommitId) || commits[0];
+    commits.find((c: Commit) => c.id === selectedCommitId) || commits[0];
 
   const associatedBuild =
-    builds.find((b) => b.commitId === selectedCommit.id) || builds[0];
+    builds.find((b: Build) => b.commitId === selectedCommit.id) || builds[0];
 
-  const changedModulesList = modules.filter((m) =>
+  const changedModulesList = modules.filter((m: Module) =>
     selectedCommit.changedModules.includes(m.id)
   );
 
@@ -56,7 +57,7 @@ export const BuildIntelligencePage: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {commits.map((c) => (
+          {commits.map((c: Commit) => (
             <div
               key={c.id}
               onClick={() => setSelectedCommitId(c.id)}
@@ -144,7 +145,7 @@ export const BuildIntelligencePage: React.FC = () => {
               Touched Modules & Cache Status
             </h4>
             <div className="space-y-3">
-              {changedModulesList.map((mod) => (
+              {changedModulesList.map((mod: Module) => (
                 <div
                   key={mod.id}
                   className="p-3.5 rounded-lg bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
@@ -221,7 +222,7 @@ export const BuildIntelligencePage: React.FC = () => {
             </h3>
 
             <div className="space-y-2.5">
-              {builds.map((b) => (
+              {builds.map((b: Build) => (
                 <div
                   key={b.id}
                   className="p-3 rounded-lg bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 text-xs flex items-center justify-between"

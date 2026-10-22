@@ -11,11 +11,12 @@ import {
   Activity,
   ArrowUpRight,
 } from 'lucide-react';
-import { useAria } from '../../context/AriaContext';
-import { StatCard } from '../../components/common/StatCard';
-import { PipelineVisualizer } from '../../components/layout/PipelineVisualizer';
-import { RiskMeter } from '../../components/common/RiskMeter';
-import { StatusBadge } from '../../components/common/StatusBadge';
+import { useAria } from '../context/AriaContext';
+import { StatCard } from '../components/common/StatCard';
+import { PipelineVisualizer } from '../components/layout/PipelineVisualizer';
+import { RiskMeter } from '../components/common/RiskMeter';
+import { StatusBadge } from '../components/common/StatusBadge';
+import type { Incident, Approval, Module } from '../types';
 
 export const OverviewPage: React.FC = () => {
   const navigate = useNavigate();
@@ -28,12 +29,12 @@ export const OverviewPage: React.FC = () => {
     subsequentCommitTestCount,
   } = useAria();
 
-  const openIncidents = incidents.filter((i) => !i.resolvedAt);
-  const pendingApprovals = approvals.filter((a) => a.status === 'pending');
+  const openIncidents = incidents.filter((i: Incident) => !i.resolvedAt);
+  const pendingApprovals = approvals.filter((a: Approval) => a.status === 'pending');
   const avgRisk =
-    modules.reduce((sum, m) => sum + m.currentRiskWeight, 0) / modules.length;
+    modules.reduce((sum: number, m: Module) => sum + m.currentRiskWeight, 0) / modules.length;
 
-  const cartModule = modules.find((m) => m.id === 'mod-checkout-cart');
+  const cartModule = modules.find((m: Module) => m.id === 'mod-checkout-cart');
   const isAfpActive = cartModule ? cartModule.currentRiskWeight > 0.3 : false;
 
   return (
@@ -193,7 +194,7 @@ export const OverviewPage: React.FC = () => {
           </div>
 
           <div className="space-y-3">
-            {modules.map((mod) => (
+            {modules.map((mod: Module) => (
               <div
                 key={mod.id}
                 className={`p-3.5 rounded-lg border transition-all ${
@@ -261,7 +262,7 @@ export const OverviewPage: React.FC = () => {
             </p>
 
             <div className="space-y-3">
-              {pendingApprovals.map((appr) => (
+              {pendingApprovals.map((appr: Approval) => (
                 <div
                   key={appr.id}
                   className="p-3 rounded-lg border border-amber-200 bg-amber-50/60 dark:border-amber-900/40 dark:bg-amber-950/20 text-xs space-y-1.5"

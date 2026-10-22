@@ -6,17 +6,16 @@ import {
   Layers,
   Clock,
   TrendingDown,
-  Sliders,
-  ShieldAlert,
 } from 'lucide-react';
-import { useAria } from '../../context/AriaContext';
-import { StatusBadge } from '../../components/common/StatusBadge';
+import { useAria } from '../context/AriaContext';
+import { StatusBadge } from '../components/common/StatusBadge';
 import {
   calculateIncidentWeightUpdate,
   calculateDecayedWeight,
   DEFAULT_AFP_PARAMS,
-} from '../../core/afpEngine';
-import { afpSimulationEngine, HazardPoint } from '../../services/afpSimulationEngine';
+} from '../core/afpEngine';
+import { afpSimulationEngine, HazardPoint } from '../services/afpSimulationEngine';
+import type { Module, AFPMessage } from '../types';
 
 export const AfpProtocolPage: React.FC = () => {
   const {
@@ -33,7 +32,7 @@ export const AfpProtocolPage: React.FC = () => {
   const [calcAlpha, setCalcAlpha] = useState<number>(0.4);
   const [calcDecayDays, setCalcDecayDays] = useState<number>(7);
   const [simLambda, setSimLambda] = useState<number>(0.1);
-  const [simHorizon, setSimHorizon] = useState<number>(30);
+  const simHorizon = 30;
 
   const calcResult = calculateIncidentWeightUpdate(calcCurrentWeight, calcConfidence, {
     ...DEFAULT_AFP_PARAMS,
@@ -54,7 +53,7 @@ export const AfpProtocolPage: React.FC = () => {
     });
   }, [calcResult.newWeight, simLambda, calcAlpha, simHorizon]);
 
-  const cartModule = modules.find((m) => m.id === 'mod-checkout-cart');
+  const cartModule = modules.find((m: Module) => m.id === 'mod-checkout-cart');
   const isAfpActive = cartModule ? cartModule.currentRiskWeight > 0.3 : false;
 
   return (
@@ -457,7 +456,7 @@ export const AfpProtocolPage: React.FC = () => {
           </div>
         ) : (
           <div className="space-y-2.5">
-            {afpMessages.map((msg) => (
+            {afpMessages.map((msg: AFPMessage) => (
               <div
                 key={msg.id}
                 className="p-3 rounded-lg bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"

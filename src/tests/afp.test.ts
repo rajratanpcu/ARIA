@@ -8,13 +8,13 @@ import {
   calculateDecayedWeight,
   calculateTestPriority,
   requiresHumanApproval,
-} from '../core/afpEngine.ts';
-import { aiHypothesisEngine } from '../services/aiHypothesisEngine.ts';
-import { afpSimulationEngine } from '../services/afpSimulationEngine.ts';
-import { ciTestRunnerSimulator } from '../services/ciTestRunnerSimulator.ts';
-import { cryptographicAuditEngine } from '../services/cryptographicAuditEngine.ts';
-import { canaryRolloutEngine } from '../services/canaryRolloutEngine.ts';
-import type { TestCase } from '../types/index.ts';
+} from '../core/afpEngine';
+import { aiHypothesisEngine } from '../services/aiHypothesisEngine';
+import { afpSimulationEngine } from '../services/afpSimulationEngine';
+import { ciTestRunnerSimulator } from '../services/ciTestRunnerSimulator';
+import { cryptographicAuditEngine } from '../services/cryptographicAuditEngine';
+import { canaryRolloutEngine } from '../services/canaryRolloutEngine';
+import type { TestCase } from '../types/index';
 
 test('AFP Gating: Rejects confidence below threshold (0.75)', () => {
   const resultLow = calculateIncidentWeightUpdate(0.3, 0.72);

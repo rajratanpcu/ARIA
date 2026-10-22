@@ -5,14 +5,12 @@ import {
   Sparkles,
   Info,
   Play,
-  RotateCcw,
   AlertOctagon,
-  Clock,
-  ShieldAlert,
 } from 'lucide-react';
-import { useAria } from '../../context/AriaContext';
-import { StatusBadge } from '../../components/common/StatusBadge';
-import { ciTestRunnerSimulator, CiRunSummary } from '../../services/ciTestRunnerSimulator';
+import { useAria } from '../context/AriaContext';
+import { StatusBadge } from '../components/common/StatusBadge';
+import { ciTestRunnerSimulator, CiRunSummary } from '../services/ciTestRunnerSimulator';
+import type { TestCase, Module } from '../types';
 
 export const CiOrchestrationPage: React.FC = () => {
   const { tests, modules, subsequentCommitTestCount } = useAria();
@@ -22,7 +20,7 @@ export const CiOrchestrationPage: React.FC = () => {
   const [runProgress, setRunProgress] = useState<number>(0);
   const [lastRunSummary, setLastRunSummary] = useState<CiRunSummary | null>(null);
 
-  const cartModule = modules.find((m) => m.id === 'mod-checkout-cart');
+  const cartModule = modules.find((m: Module) => m.id === 'mod-checkout-cart');
   const isAfpElevated = cartModule ? cartModule.currentRiskWeight > 0.3 : false;
 
   const handleRunSelectedTests = () => {
@@ -48,7 +46,7 @@ export const CiOrchestrationPage: React.FC = () => {
     }, 900);
   };
 
-  const filteredTests = tests.filter((t) => {
+  const filteredTests = tests.filter((t: TestCase) => {
     if (filterType !== 'all' && t.type !== filterType) return false;
     if (filterModule !== 'all' && t.moduleId !== filterModule) return false;
     return true;
@@ -264,7 +262,7 @@ export const CiOrchestrationPage: React.FC = () => {
               className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-blue-500"
             >
               <option value="all">All Modules</option>
-              {modules.map((m) => (
+              {modules.map((m: Module) => (
                 <option key={m.id} value={m.id}>
                   {m.name}
                 </option>
@@ -288,7 +286,7 @@ export const CiOrchestrationPage: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-800/80">
-              {filteredTests.map((test) => (
+              {filteredTests.map((test: TestCase) => (
                 <tr
                   key={test.id}
                   className={`hover:bg-slate-50 dark:hover:bg-slate-850/60 transition-colors ${
