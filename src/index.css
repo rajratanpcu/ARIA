@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light dark;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
+  html:not(.dark) {
+    color-scheme: light;
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 font-sans selection:bg-blue-600 selection:text-white transition-colors duration-150;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  /* Clean subtle scrollbars */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-slate-300 dark:bg-slate-750 hover:bg-slate-400 dark:hover:bg-slate-650 rounded-full;
+  }
+}
+
+/* Professional enterprise elevation & focus states */
+.border-subtle {
+  @apply border-slate-200 dark:border-slate-800;
+}
+
+.surface-card {
+  @apply bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm;
+}
+
+.surface-nested {
+  @apply bg-slate-50 dark:bg-slate-850 border border-slate-200/80 dark:border-slate-800;
+}
+
+.surface-inset {
+  @apply bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800;
+}
+
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}

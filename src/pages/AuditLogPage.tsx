@@ -1,0 +1,162 @@
+import React, { useState } from 'react';
+import {
+  Search,
+  Download,
+} from 'lucide-react';
+import { useAria } from '../../context/AriaContext';
+import { AutonomyBadge } from '../../components/common/AutonomyBadge';
+import { StatusBadge } from '../../components/common/StatusBadge';
+
+export const AuditLogPage: React.FC = () => {
+  const { auditEvents } = useAria();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [severityFilter, setSeverityFilter] = useState<string>('all');
+
+  const filteredEvents = auditEvents.filter((ev) => {
+    if (categoryFilter !== 'all' && ev.category !== categoryFilter) return false;
+    if (severityFilter !== 'all' && ev.severity !== severityFilter) return false;
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      const matchAction = ev.action.toLowerCase().includes(term);
+      const matchAgent = ev.agent?.toLowerCase().includes(term);
+      const matchDetails = JSON.stringify(ev.details).toLowerCase().includes(term);
+      return matchAction || matchAgent || matchDetails;
+    }
+    return true;
+  });
+
+  const exportAuditLogJson = () => {
+    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(auditEvents, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute('href', dataStr);
+    downloadAnchor.setAttribute('download', `aria_audit_log_${Date.now()}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200 dark:border-slate-800">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-2.5">
+            Immutable Audit Trail & Event Timeline
+            <span className="text-xs px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800 font-mono font-medium">
+              Audit Subsystem
+            </span>
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            Searchable, cryptographically traceable event log recording all build decisions, test selections, AFP messages, and human approvals.
+          </p>
+        </div>
+
+        <button
+          onClick={exportAuditLogJson}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-semibold transition-colors"
+        >
+          <Download className="w-3.5 h-3.5" />
+          <span>Export JSON Audit Trail</span>
+        </button>
+      </div>
+
+      {/* Filter & Search Bar */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 flex flex-col md:flex-row gap-3 shadow-sm">
+        <div className="flex-1 relative">
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search audit actions, agents, modules, or parameters..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-blue-500"
+          />
+        </div>
+
+        <div className="flex items-center gap-3">
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-blue-500"
+          >
+            <option value="all">All Categories</option>
+            <option value="BUILD">BUILD</option>
+            <option value="TEST_SELECTION">TEST_SELECTION</option>
+            <option value="RELEASE">RELEASE</option>
+            <option value="DEPLOYMENT">DEPLOYMENT</option>
+            <option value="INCIDENT">INCIDENT</option>
+            <option value="AFP">AFP</option>
+            <option value="GOVERNANCE">GOVERNANCE</option>
+          </select>
+
+          <select
+            value={severityFilter}
+            onChange={(e) => setSeverityFilter(e.target.value)}
+            className="bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-blue-500"
+          >
+            <option value="all">All Severities</option>
+            <option value="info">Info</option>
+            <option value="notice">Notice</option>
+            <option value="warning">Warning</option>
+            <option value="alert">Alert</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Events Timeline */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+          <span className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+            Recorded State Transitions ({filteredEvents.length} events)
+          </span>
+          <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
+            Persistent in browser storage
+          </span>
+        </div>
+
+        {filteredEvents.length === 0 ? (
+          <div className="text-xs text-slate-500 py-8 text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-lg">
+            No audit events matched the search criteria.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {filteredEvents.map((ev) => (
+              <div
+                key={ev.id}
+                className="p-3.5 rounded-lg bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800/90 text-xs hover:border-slate-300 dark:hover:border-slate-700 transition-colors"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-[11px] font-bold text-blue-700 dark:text-blue-400">{ev.category}</span>
+                    <span className="font-bold text-slate-900 dark:text-slate-100">{ev.action}</span>
+                    {ev.agent && (
+                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-200 dark:bg-slate-800 text-blue-700 dark:text-blue-300 border border-slate-300 dark:border-slate-700 font-mono">
+                        {ev.agent}
+                      </span>
+                    )}
+                    <StatusBadge status={ev.severity} size="sm" />
+                    <AutonomyBadge level={ev.autonomyLevel} />
+                  </div>
+
+                  <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 font-mono text-[11px]">
+                    {ev.isSimulated && (
+                      <span className="text-[9px] uppercase px-1.5 py-0.2 rounded bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                        Simulated
+                      </span>
+                    )}
+                    <span>{ev.timestamp}</span>
+                  </div>
+                </div>
+
+                <div className="p-2.5 rounded bg-slate-950 font-mono text-[11px] text-slate-300 overflow-x-auto border border-slate-800">
+                  <pre className="whitespace-pre-wrap">{JSON.stringify(ev.details, null, 2)}</pre>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
