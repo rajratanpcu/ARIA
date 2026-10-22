@@ -4,17 +4,49 @@ import {
   XCircle,
   Sparkles,
   Info,
+  Play,
+  RotateCcw,
+  AlertOctagon,
+  Clock,
+  ShieldAlert,
 } from 'lucide-react';
 import { useAria } from '../../context/AriaContext';
 import { StatusBadge } from '../../components/common/StatusBadge';
+import { ciTestRunnerSimulator, CiRunSummary } from '../../services/ciTestRunnerSimulator';
 
 export const CiOrchestrationPage: React.FC = () => {
   const { tests, modules, subsequentCommitTestCount } = useAria();
   const [filterType, setFilterType] = useState<string>('all');
   const [filterModule, setFilterModule] = useState<string>('all');
+  const [isRunningTests, setIsRunningTests] = useState<boolean>(false);
+  const [runProgress, setRunProgress] = useState<number>(0);
+  const [lastRunSummary, setLastRunSummary] = useState<CiRunSummary | null>(null);
 
   const cartModule = modules.find((m) => m.id === 'mod-checkout-cart');
   const isAfpElevated = cartModule ? cartModule.currentRiskWeight > 0.3 : false;
+
+  const handleRunSelectedTests = () => {
+    setIsRunningTests(true);
+    setRunProgress(15);
+
+    const stepInterval = setInterval(() => {
+      setRunProgress((prev) => {
+        if (prev >= 90) {
+          clearInterval(stepInterval);
+          return 90;
+        }
+        return prev + 25;
+      });
+    }, 150);
+
+    setTimeout(() => {
+      clearInterval(stepInterval);
+      setRunProgress(100);
+      const summary = ciTestRunnerSimulator.executeSelectedTests(tests, isAfpElevated);
+      setLastRunSummary(summary);
+      setIsRunningTests(false);
+    }, 900);
+  };
 
   const filteredTests = tests.filter((t) => {
     if (filterType !== 'all' && t.type !== filterType) return false;
@@ -61,6 +93,15 @@ export const CiOrchestrationPage: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              onClick={handleRunSelectedTests}
+              disabled={isRunningTests}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs transition-colors shadow-sm disabled:opacity-50"
+            >
+              <Play className={`w-3.5 h-3.5 ${isRunningTests ? 'animate-pulse' : ''}`} />
+              <span>{isRunningTests ? 'Running Selected Tests...' : 'Execute Selected Tests'}</span>
+            </button>
+
             <span
               className={`text-xs px-3 py-1 rounded-full font-mono font-bold border ${
                 isAfpElevated
@@ -113,6 +154,86 @@ export const CiOrchestrationPage: React.FC = () => {
             <span className="text-[11px] text-slate-500 dark:text-slate-400">Model estimate</span>
           </div>
         </div>
+        {/* Progress Bar during test execution */}
+        {isRunningTests && (
+          <div className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-800">
+            <div className="flex items-center justify-between text-xs font-mono text-slate-500 dark:text-slate-400 mb-1">
+              <span>Executing test runner workers across mobile matrices...</span>
+              <span>{runProgress}%</span>
+            </div>
+            <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+              <div
+                className="bg-blue-600 h-2 rounded-full transition-all duration-200"
+                style={{ width: `${runProgress}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Live Test Run Summary Banner (if executed) */}
+        {lastRunSummary && (
+          <div className="mt-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 animate-in fade-in duration-300">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-200 dark:border-slate-800 mb-3 text-xs">
+              <div className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <span>COA Test Suite Execution Complete ({lastRunSummary.runId})</span>
+              </div>
+              <div className="font-mono text-slate-500 dark:text-slate-400">
+                Duration: {(lastRunSummary.durationMs / 1000).toFixed(1)}s (Parallel Speedup: 6.2x)
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
+              <div className="p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800">
+                <span className="text-emerald-700 dark:text-emerald-300 block text-[10px] uppercase font-sans">
+                  Passed Tests
+                </span>
+                <span className="text-lg font-bold text-emerald-800 dark:text-emerald-200">
+                  {lastRunSummary.passedCount}
+                </span>
+              </div>
+
+              <div className="p-2.5 rounded-lg bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800">
+                <span className="text-rose-700 dark:text-rose-300 block text-[10px] uppercase font-sans">
+                  Failed Regressions
+                </span>
+                <span className="text-lg font-bold text-rose-800 dark:text-rose-200">
+                  {lastRunSummary.failedCount}
+                </span>
+              </div>
+
+              <div className="p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800">
+                <span className="text-amber-700 dark:text-amber-300 block text-[10px] uppercase font-sans">
+                  Quarantined Flakes
+                </span>
+                <span className="text-lg font-bold text-amber-800 dark:text-amber-200">
+                  {lastRunSummary.quarantinedCount}
+                </span>
+              </div>
+
+              <div className="p-2.5 rounded-lg bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800">
+                <span className="text-blue-700 dark:text-blue-300 block text-[10px] uppercase font-sans">
+                  Flaky Monitored
+                </span>
+                <span className="text-lg font-bold text-blue-800 dark:text-blue-200">
+                  {lastRunSummary.flakyCount}
+                </span>
+              </div>
+            </div>
+
+            {lastRunSummary.failedCount > 0 && (
+              <div className="mt-3 p-3 rounded-lg bg-rose-100/70 dark:bg-rose-950 border border-rose-300 dark:border-rose-800 text-xs text-rose-900 dark:text-rose-200 flex items-start gap-2">
+                <AlertOctagon className="w-4 h-4 text-rose-600 dark:text-rose-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <div className="font-bold">Regression Detected by Expanded Test Suite:</div>
+                  <p className="mt-0.5 text-[11px] font-mono">
+                    {lastRunSummary.results.find((r) => r.status === 'failed')?.failureMessage}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Tests Table with Filters */}

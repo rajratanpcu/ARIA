@@ -11,6 +11,7 @@ import {
 } from '../core/afpEngine.ts';
 import { aiHypothesisEngine } from '../services/aiHypothesisEngine.ts';
 import { afpSimulationEngine } from '../services/afpSimulationEngine.ts';
+import { ciTestRunnerSimulator } from '../services/ciTestRunnerSimulator.ts';
 import type { TestCase } from '../types/index.ts';
 
 test('AFP Gating: Rejects confidence below threshold (0.75)', () => {
@@ -142,5 +143,49 @@ test('AFP Simulation Engine: Generates accurate decay curve and Monte Carlo boun
   assert.ok(day14.lowerConfidence95 <= day14.expectedRisk);
   assert.ok(day14.upperConfidence95 >= day14.expectedRisk);
 });
+
+test('CI Test Runner Simulator: Simulates test execution and detects elevated regression failures', () => {
+  const sampleTests = [
+    {
+      id: 'test-1',
+      name: 'test_checkout_cart_stale_cache_sync',
+      moduleName: 'checkout-cart',
+      selected: true,
+      executionCostMs: 2200,
+      historicalFailureRate: 0.08,
+    },
+    {
+      id: 'test-2',
+      name: 'test_user_auth_token_refresh',
+      moduleName: 'user-auth',
+      selected: true,
+      executionCostMs: 1400,
+      historicalFailureRate: 0.01,
+    },
+    {
+      id: 'test-3',
+      name: 'test_analytics_buffer_pruned',
+      moduleName: 'analytics-sdk',
+      selected: false,
+      executionCostMs: 3100,
+      historicalFailureRate: 0.02,
+    },
+  ];
+
+  // Baseline mode (isAfpElevated = false): All selected tests pass
+  const baselineRun = ciTestRunnerSimulator.executeSelectedTests(sampleTests, false);
+  assert.strictEqual(baselineRun.totalExecuted, 2);
+  assert.strictEqual(baselineRun.passedCount, 2);
+  assert.strictEqual(baselineRun.failedCount, 0);
+
+  // Elevated mode (isAfpElevated = true): Catches stale cache defect
+  const elevatedRun = ciTestRunnerSimulator.executeSelectedTests(sampleTests, true);
+  assert.strictEqual(elevatedRun.totalExecuted, 2);
+  assert.strictEqual(elevatedRun.failedCount, 1);
+  const failedTest = elevatedRun.results.find((r) => r.status === 'failed');
+  assert.ok(failedTest);
+  assert.match(failedTest.failureMessage!, /CartItemState schema v14/i);
+});
+
 
 
